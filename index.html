@@ -366,11 +366,11 @@
             <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 4px;">본인의 닉네임을 입력 후 방을 생성하거나 코드로 입장하세요.</div>
             
             <div class="input-group">
-                <label>내 닉네임</label>
+                <label>닉네임</label>
                 <input type="text" id="input-my-name" placeholder="사용할 닉네임 입력" value="">
             </div>
 
-            <button id="btn-create-room" style="padding: 12px; font-size: 1rem; margin-top: 4px;">✨ 새 방 생성하기</button>
+            <button id="btn-create-room" style="padding: 12px; font-size: 1rem; margin-top: 4px;">방 생성하기</button>
             
             <div style="display: flex; align-items: center; text-align: center; margin: 5px 0; color: var(--text-muted); font-size: 0.8rem;">
                 <hr style="flex: 1; border-color: var(--panel-border);">
@@ -659,7 +659,7 @@
                     <input type="number" class="input-artifact" data-id="${myPlayer.id}" value="${myPlayer.artifact}" min="0" placeholder="" ${!myPlayer.isAlive ? 'disabled' : ''}>
                 </div>
                 <div class="input-group">
-                    <label>금화 (+1점)</label>
+                    <label>금화 점수 (+1점)</label>
                     <input type="number" class="input-gold" data-id="${myPlayer.id}" value="${myPlayer.gold}" min="0" placeholder="" ${!myPlayer.isAlive ? 'disabled' : ''}>
                 </div>
                 <div class="input-group">
@@ -766,7 +766,7 @@
         await saveRoomData();
         updateLeaderboard();
         renderLogs();
-        alert('✨ 탐험 기록이 성공적으로 등록되었습니다!');
+        alert('탐험 기록이 성공적으로 등록되었습니다!');
     });
 
     function updateLeaderboard() {
@@ -834,7 +834,7 @@
                 const artCurr = p.artifact === '' ? 0 : p.artifact;
                 const artPrev = sortedPlayers[index - 1].artifact === '' ? 0 : sortedPlayers[index - 1].artifact;
                 if (artCurr > artPrev) {
-                    artifactDisplay += `<span class="tie-note">✨유물 승리</span>`;
+                    artifactDisplay += `<span class="tie-note">유물 승리</span>`;
                 }
             }
 
