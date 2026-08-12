@@ -2,8 +2,8 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>클랭크 카타콤: 던전 실시간 점수 계산기</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>클랭크 카타콤: 모바일 점수 정산소</title>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Nanum+Gothic:wght@400;700&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -22,6 +22,7 @@
             box-sizing: border-box;
             margin: 0;
             padding: 0;
+            -webkit-tap-highlight-color: transparent;
         }
 
         body {
@@ -30,10 +31,9 @@
             font-family: 'Nanum Gothic', sans-serif;
             background-image: radial-gradient(circle at center, #231914 0%, #0c0908 100%);
             min-height: 100vh;
-            padding: 20px;
+            padding: 10px;
         }
 
-        /* 화면 흔들림 애니메이션 효과 */
         @keyframes screenShake {
             0% { transform: translate(0, 0) rotate(0deg); }
             20% { transform: translate(-6px, 4px) rotate(-0.5deg); }
@@ -48,38 +48,38 @@
         }
 
         .container {
-            max-width: 1200px;
+            max-width: 100%;
             margin: 0 auto;
         }
 
         header {
             text-align: center;
-            margin-bottom: 30px;
+            margin-bottom: 15px;
             border-bottom: 2px solid var(--accent-gold);
-            padding-bottom: 20px;
+            padding-bottom: 10px;
         }
 
         h1 {
             font-family: 'Cinzel', serif;
             color: var(--accent-gold);
-            font-size: 2.2rem;
-            letter-spacing: 2px;
+            font-size: 1.5rem;
+            letter-spacing: 1px;
             text-shadow: 0 2px 4px rgba(0,0,0,0.7);
-            margin-bottom: 10px;
+            margin-bottom: 5px;
         }
 
         .subtitle {
             color: var(--text-muted);
-            font-size: 1rem;
+            font-size: 0.8rem;
         }
 
         .card {
             background-color: var(--panel-bg);
             border: 2px solid var(--panel-border);
             border-radius: 8px;
-            padding: 25px;
-            margin-bottom: 25px;
-            box-shadow: 0 8px 16px rgba(0,0,0,0.6);
+            padding: 12px;
+            margin-bottom: 15px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.6);
             position: relative;
         }
 
@@ -89,32 +89,32 @@
             align-items: center;
             border-bottom: 1px solid var(--panel-border);
             padding-bottom: 8px;
-            margin-bottom: 15px;
-            flex-wrap: wrap;
-            gap: 10px;
+            margin-bottom: 12px;
+            gap: 8px;
         }
 
         h2 {
             font-family: 'Cinzel', serif;
             color: var(--accent-gold);
-            font-size: 1.3rem;
+            font-size: 1.05rem;
             margin: 0;
             border: none;
             padding: 0;
+            white-space: nowrap;
         }
 
         .action-buttons {
             display: flex;
-            gap: 10px;
+            gap: 6px;
         }
 
         input[type="text"], input[type="number"] {
             background-color: #0f0b09;
             border: 1px solid var(--panel-border);
             color: var(--text-main);
-            padding: 8px 12px;
-            border-radius: 4px;
-            font-size: 0.95rem;
+            padding: 10px;
+            border-radius: 6px;
+            font-size: 1rem; /* 모바일 확대 방지 위해 16px 이상 권장이나 터치 가독성을 위해 1rem 설정 */
             outline: none;
             transition: border-color 0.3s;
             width: 100%;
@@ -128,18 +128,18 @@
             background: linear-gradient(to bottom, #d4af37, #997a15);
             color: #0c0908;
             border: none;
-            padding: 8px 16px;
-            border-radius: 4px;
+            padding: 8px 12px;
+            border-radius: 6px;
             font-weight: bold;
-            font-size: 0.95rem;
+            font-size: 0.85rem;
             cursor: pointer;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.4);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.4);
             transition: all 0.2s;
+            white-space: nowrap;
         }
 
-        button:hover {
-            background: linear-gradient(to bottom, #f1c40f, #b8860b);
-            transform: translateY(-1px);
+        button:active {
+            transform: scale(0.96);
         }
 
         .btn-dragon {
@@ -148,47 +148,44 @@
             border: 1px solid #e74c3c;
         }
 
-        .btn-dragon:hover {
-            background: linear-gradient(to bottom, #e74c3c, #a93226);
-        }
-
         .btn-danger-subtle {
             background: transparent;
             border: 1px solid var(--danger);
             color: var(--danger);
             padding: 4px 8px;
-            font-size: 0.8rem;
+            font-size: 0.75rem;
         }
 
-        .btn-danger-subtle:hover {
+        .btn-danger-subtle:active {
             background-color: var(--danger);
             color: white;
         }
 
+        /* 모바일에서는 1열(Full-width)로 배치해 가독성 극대화 */
         .players-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-            gap: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
         }
 
         .player-card {
             background-color: #130f0d;
             border: 1px solid var(--panel-border);
             border-radius: 6px;
-            padding: 15px;
+            padding: 12px;
             display: flex;
             flex-direction: column;
-            gap: 12px;
+            gap: 10px;
             position: relative;
             overflow: hidden;
         }
 
         .player-card-header {
             font-family: 'Cinzel', serif;
-            font-size: 1.1rem;
+            font-size: 1rem;
             color: var(--accent-gold);
             border-bottom: 1px dashed var(--panel-border);
-            padding-bottom: 8px;
+            padding-bottom: 6px;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -197,36 +194,36 @@
         .checkbox-group {
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 10px;
             cursor: pointer;
             background: #0f0b09;
-            padding: 8px;
-            border-radius: 4px;
+            padding: 10px;
+            border-radius: 6px;
             border: 1px solid var(--panel-border);
             font-size: 0.9rem;
         }
 
         .checkbox-group input {
-            width: 16px;
-            height: 16px;
+            width: 20px;
+            height: 20px;
             accent-color: var(--accent-gold);
             cursor: pointer;
         }
 
         .score-inputs-grid {
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: repeat(2, 1fr);
             gap: 8px;
         }
 
         .input-group {
             display: flex;
             flex-direction: column;
-            gap: 5px;
+            gap: 4px;
         }
 
         .input-group label {
-            font-size: 0.85rem;
+            font-size: 0.8rem;
             color: var(--text-muted);
         }
 
@@ -241,7 +238,7 @@
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            gap: 15px;
+            gap: 12px;
             z-index: 10;
             transition: opacity 0.3s ease;
         }
@@ -253,9 +250,9 @@
         .death-title {
             font-family: 'Cinzel', serif;
             color: var(--danger);
-            font-size: 2rem;
+            font-size: 1.8rem;
             font-weight: bold;
-            letter-spacing: 3px;
+            letter-spacing: 2px;
             text-shadow: 0 0 10px rgba(192, 57, 43, 0.6);
             animation: pulseText 1.5s infinite alternate;
         }
@@ -271,26 +268,20 @@
             color: var(--danger);
             padding: 6px 16px;
             border-radius: 4px;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
             cursor: pointer;
             box-shadow: none;
-            transition: all 0.2s;
-        }
-
-        .btn-close-death:hover {
-            background-color: var(--danger);
-            color: white;
-            transform: none;
         }
 
         .leaderboard-table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 10px;
+            margin-top: 5px;
+            font-size: 0.85rem;
         }
 
         .leaderboard-table th, .leaderboard-table td {
-            padding: 12px;
+            padding: 8px 4px;
             text-align: center;
             border-bottom: 1px solid var(--panel-border);
         }
@@ -299,10 +290,7 @@
             background-color: #231914;
             color: var(--accent-gold);
             font-family: 'Cinzel', serif;
-        }
-
-        .leaderboard-table tr:hover {
-            background-color: rgba(212, 175, 55, 0.05);
+            font-size: 0.8rem;
         }
 
         .rank-1 {
@@ -311,36 +299,30 @@
         }
 
         .tie-note {
-            font-size: 0.75rem;
+            font-size: 0.65rem;
             color: var(--accent-gold);
             display: block;
-            margin-top: 2px;
+            margin-top: 1px;
         }
 
         .log-container {
             background-color: #0f0b09;
             border: 1px solid var(--panel-border);
             border-radius: 4px;
-            height: 150px;
+            height: 110px;
             overflow-y: auto;
-            padding: 10px;
+            padding: 8px;
             font-family: monospace;
-            font-size: 0.9rem;
+            font-size: 0.75rem;
             display: flex;
             flex-direction: column;
-            gap: 6px;
+            gap: 4px;
         }
 
         .log-item {
-            padding: 4px 8px;
+            padding: 3px 6px;
             background: rgba(255, 255, 255, 0.03);
             border-left: 3px solid var(--accent-gold);
-            animation: fadeIn 0.3s ease-in-out;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(5px); }
-            to { opacity: 1; transform: translateY(0); }
         }
 
         .dead-badge {
@@ -359,16 +341,16 @@
 <div class="container" id="main-container">
     <header>
         <h1>CLANK! CATACOMBS</h1>
-        <div class="subtitle">지하 카타콤의 심장부, 실시간 탐험 점수 정산소</div>
+        <div class="subtitle">모바일 던전 실시간 정산소</div>
     </header>
 
     <!-- 점수 기록 섹션 -->
     <section class="card" id="scoring-section">
         <div class="card-header-flex">
-            <h2>탐험가별 실시간 기록 관리</h2>
+            <h2>탐험가 관리</h2>
             <div class="action-buttons">
-                <button class="btn-dragon" id="btn-dragon-attack">🐉 드래곤 공격!</button>
-                <button id="btn-add-player">+ 인원 추가</button>
+                <button class="btn-dragon" id="btn-dragon-attack">🐉 드래곤</button>
+                <button id="btn-add-player">+ 인원추가</button>
             </div>
         </div>
         <div id="players-scoring-container" class="players-grid"></div>
@@ -376,23 +358,23 @@
 
     <!-- 실시간 순위표 및 피드 섹션 -->
     <section class="card" id="dashboard-section">
-        <h2>실시간 던전 탐험 순위</h2>
+        <h2>실시간 순위</h2>
         <table class="leaderboard-table">
             <thead>
                 <tr>
                     <th>순위</th>
-                    <th>탐험가 이름</th>
-                    <th>생존 상태</th>
-                    <th>유물 점수</th>
+                    <th>이름</th>
+                    <th>상태</th>
+                    <th>유물</th>
                     <th>총점</th>
                 </tr>
             </thead>
             <tbody id="leaderboard-body"></tbody>
         </table>
 
-        <h2 style="margin-top: 30px;">실시간 점수 변동 피드</h2>
+        <h2 style="margin-top: 20px; font-size: 1rem;">던전 이벤트 피드</h2>
         <div class="log-container" id="score-log-feed">
-            <div class="log-item">[시스템] 카타콤 던전 탐험이 시작되었습니다. 인원을 추가하고 점수를 입력해 주세요.</div>
+            <div class="log-item">[시스템] 카타콤 모험이 시작되었습니다.</div>
         </div>
     </section>
 </div>
@@ -409,19 +391,16 @@
     const leaderboardBody = document.getElementById('leaderboard-body');
     const scoreLogFeed = document.getElementById('score-log-feed');
 
-    // 웹 오디오 API를 활용한 다크 판타지풍의 저음 타격음/경고음 생성기
     function playDragonSound() {
         try {
             const AudioContext = window.AudioContext || window.webkitAudioContext;
             if (!AudioContext) return;
             const ctx = new AudioContext();
 
-            // 저음의 웅장한 드래곤 포효/공격 사운드 (오실레이터 활용)
             const osc = ctx.createOscillator();
             const gainNode = ctx.createGain();
 
             osc.type = 'sawtooth';
-            // 주파수를 낮게 시작해서 뚝 떨어지게 설정하여 웅장한 괴수 느낌 연출
             osc.frequency.setValueAtTime(130, ctx.currentTime);
             osc.frequency.exponentialRampToValueAtTime(35, ctx.currentTime + 0.6);
 
@@ -434,26 +413,22 @@
             osc.start();
             osc.stop(ctx.currentTime + 0.6);
         } catch (e) {
-            console.log("AudioContext not allowed or supported without user interaction", e);
+            console.log("AudioContext not supported", e);
         }
     }
 
-    // 드래곤 공격 버튼 이벤트: 화면 흔들림 + 사운드 + 로그 추가
     btnDragonAttack.addEventListener('click', () => {
         playDragonSound();
-        
-        // 화면 흔들림 효과 트리거
         mainContainer.classList.remove('shake-effect');
-        void mainContainer.offsetWidth; // reflow 강제 유발로 애니메이션 재실행
+        void mainContainer.offsetWidth;
         mainContainer.classList.add('shake-effect');
-
-        addLog(`[경고] 드래곤이 카타콤을 습격했습니다! 모두 주의하세요! 🔥`);
+        addLog(`[경고] 드래곤 습격 발생! 🔥`);
     });
 
     function initDefaultPlayers() {
         sessionData.players = [
-            { id: 0, name: "모험가 1", isAlive: true, mission: false, artifact: 0, gold: 0, token: 0, card: 0, totalScore: 0 },
-            { id: 1, name: "모험가 2", isAlive: true, mission: false, artifact: 0, gold: 0, token: 0, card: 0, totalScore: 0 }
+            { id: 0, name: "모험가 1", isAlive: true, mission: false, artifact: '', gold: '', token: '', card: '', totalScore: 0 },
+            { id: 1, name: "모험가 2", isAlive: true, mission: false, artifact: '', gold: '', token: '', card: '', totalScore: 0 }
         ];
         renderScoringCards();
         updateLeaderboard();
@@ -468,16 +443,16 @@
             name: newName,
             isAlive: true,
             mission: false,
-            artifact: 0,
-            gold: 0,
-            token: 0,
-            card: 0,
+            artifact: '',
+            gold: '',
+            token: '',
+            card: '',
             totalScore: 0
         });
 
         renderScoringCards();
         updateLeaderboard();
-        addLog(`[시스템] 새로운 탐험가 '${newName}'가 합류했습니다.`);
+        addLog(`[시스템] '${newName}' 합류.`);
     });
 
     window.removePlayer = function(id) {
@@ -486,7 +461,7 @@
             sessionData.players = sessionData.players.filter(p => p.id !== id);
             renderScoringCards();
             updateLeaderboard();
-            addLog(`[시스템] 탐험가 '${target.name}'가 제외되었습니다.`);
+            addLog(`[시스템] '${target.name}' 제외.`);
         }
     };
 
@@ -494,7 +469,7 @@
         playersScoringContainer.innerHTML = '';
         
         if (sessionData.players.length === 0) {
-            playersScoringContainer.innerHTML = `<div style="grid-column: 1/-1; text-align: center; color: var(--text-muted); padding: 20px;">등록된 탐험가가 없습니다. 상단의 '+ 인원 추가' 버튼을 눌러주세요.</div>`;
+            playersScoringContainer.innerHTML = `<div style="text-align: center; color: var(--text-muted); padding: 15px; font-size: 0.85rem;">등록된 탐험가가 없습니다. 우측 상단의 '+ 인원추가' 버튼을 눌러주세요.</div>`;
             return;
         }
 
@@ -508,7 +483,7 @@
                 </div>
 
                 <div class="player-card-header">
-                    <input type="text" class="p-name-input" data-id="${p.id}" value="${p.name}" style="background:transparent; border:none; color:var(--accent-gold); font-family:'Cinzel', serif; font-size:1.1rem; width:120px;" placeholder="이름 입력">
+                    <input type="text" class="p-name-input" data-id="${p.id}" value="${p.name}" style="background:transparent; border:none; color:var(--accent-gold); font-family:'Cinzel', serif; font-size:1rem; width:120px;" placeholder="이름 입력">
                     <button class="btn-danger-subtle" onclick="removePlayer(${p.id})">삭제</button>
                 </div>
                 <label class="checkbox-group">
@@ -522,19 +497,19 @@
                 <div class="score-inputs-grid">
                     <div class="input-group">
                         <label>유물 점수</label>
-                        <input type="number" class="input-artifact" data-id="${p.id}" value="${p.artifact}" min="0" ${!p.isAlive ? 'disabled' : ''}>
+                        <input type="number" class="input-artifact" data-id="${p.id}" value="${p.artifact}" min="0" placeholder="" ${!p.isAlive ? 'disabled' : ''}>
                     </div>
                     <div class="input-group">
                         <label>금화 (+1점)</label>
-                        <input type="number" class="input-gold" data-id="${p.id}" value="${p.gold}" min="0" ${!p.isAlive ? 'disabled' : ''}>
+                        <input type="number" class="input-gold" data-id="${p.id}" value="${p.gold}" min="0" placeholder="" ${!p.isAlive ? 'disabled' : ''}>
                     </div>
                     <div class="input-group">
                         <label>토큰 점수</label>
-                        <input type="number" class="input-token" data-id="${p.id}" value="${p.token}" min="0" ${!p.isAlive ? 'disabled' : ''}>
+                        <input type="number" class="input-token" data-id="${p.id}" value="${p.token}" min="0" placeholder="" ${!p.isAlive ? 'disabled' : ''}>
                     </div>
                     <div class="input-group">
                         <label>카드 점수</label>
-                        <input type="number" class="input-card" data-id="${p.id}" value="${p.card}" min="0" ${!p.isAlive ? 'disabled' : ''}>
+                        <input type="number" class="input-card" data-id="${p.id}" value="${p.card}" min="0" placeholder="" ${!p.isAlive ? 'disabled' : ''}>
                     </div>
                 </div>
             `;
@@ -568,7 +543,7 @@
                     inputs.forEach(input => {
                         input.disabled = true;
                         if (input.type === 'checkbox') input.checked = false;
-                        else input.value = 0;
+                        else input.value = '';
                     });
                 } else {
                     overlay.classList.add('hidden');
@@ -580,7 +555,6 @@
 
         document.querySelectorAll('.btn-close-death').forEach(btn => {
             btn.addEventListener('click', (e) => {
-                const id = parseInt(e.target.dataset.id);
                 const card = e.target.closest('.player-card');
                 const overlay = card.querySelector('.death-overlay');
                 overlay.classList.add('hidden');
@@ -596,7 +570,7 @@
     }
 
     function recalculateAndNotify() {
-        sessionData.players.export = sessionData.players.forEach(p => {
+        sessionData.players.forEach(p => {
             const card = playersScoringContainer.querySelector(`[data-id="${p.id}"].input-is-alive`)?.closest('.player-card');
             if (!card) return;
             
@@ -605,20 +579,31 @@
 
             if (!isAlive) {
                 p.mission = false;
-                p.artifact = 0;
-                p.gold = 0;
-                p.token = 0;
-                p.card = 0;
+                p.artifact = '';
+                p.gold = '';
+                p.token = '';
+                p.card = '';
                 p.totalScore = 0;
             } else {
                 p.mission = card.querySelector('.input-mission').checked;
-                p.artifact = parseInt(card.querySelector('.input-artifact').value) || 0;
-                p.gold = parseInt(card.querySelector('.input-gold').value) || 0;
-                p.token = parseInt(card.querySelector('.input-token').value) || 0;
-                p.card = parseInt(card.querySelector('.input-card').value) || 0;
+                
+                const artVal = card.querySelector('.input-artifact').value;
+                const goldVal = card.querySelector('.input-gold').value;
+                const tokenVal = card.querySelector('.input-token').value;
+                const cardVal = card.querySelector('.input-card').value;
+
+                p.artifact = artVal === '' ? '' : parseInt(artVal);
+                p.gold = goldVal === '' ? '' : parseInt(goldVal);
+                p.token = tokenVal === '' ? '' : parseInt(tokenVal);
+                p.card = cardVal === '' ? '' : parseInt(cardVal);
 
                 const missionScore = p.mission ? 20 : 0;
-                p.totalScore = missionScore + p.artifact + p.gold + p.token + p.card;
+                const artScore = p.artifact === '' ? 0 : p.artifact;
+                const goldScore = p.gold === '' ? 0 : p.gold;
+                const tokenScore = p.token === '' ? 0 : p.token;
+                const cardScore = p.card === '' ? 0 : p.card;
+
+                p.totalScore = missionScore + artScore + goldScore + tokenScore + cardScore;
             }
         });
 
@@ -626,47 +611,50 @@
     }
 
     function updateLeaderboard() {
-        // 클랭크 규칙: 1순위 총점, 동점시 2순위 유물 점수가 더 높은 사람이 승리(상위 정렬)
         const sortedPlayers = [...sessionData.players].sort((a, b) => {
             if (b.totalScore !== a.totalScore) {
                 return b.totalScore - a.totalScore;
             }
-            return b.artifact - a.artifact;
+            const artA = a.artifact === '' ? 0 : a.artifact;
+            const artB = b.artifact === '' ? 0 : b.artifact;
+            return artB - artA;
         });
 
         leaderboardBody.innerHTML = '';
         
         if (sortedPlayers.length === 0) {
-            leaderboardBody.innerHTML = `<tr><td colspan="5" style="color: var(--text-muted);">표시할 순위 데이터가 없습니다.</td></tr>`;
+            leaderboardBody.innerHTML = `<tr><td colspan="5" style="color: var(--text-muted);">순위 데이터가 없습니다.</td></tr>`;
             return;
         }
 
-        // 동점자 체크 로직 (총점과 유물 점수가 모두 같은 경우 공동 순위 판정용)
         sortedPlayers.forEach((p, index) => {
             const tr = document.createElement('tr');
             if (index === 0) tr.classList.add('rank-1');
 
             let rankText = `${index + 1}위`;
 
-            // 바로 앞 사람과 총점이 같을 경우 동점 규칙 적용 설명 추가
             if (index > 0 && sortedPlayers[index].totalScore === sortedPlayers[index - 1].totalScore) {
-                if (sortedPlayers[index].artifact === sortedPlayers[index - 1].artifact) {
-                    rankText = `${index}위 (동점)`;
+                const artCurr = p.artifact === '' ? 0 : p.artifact;
+                const artPrev = sortedPlayers[index - 1].artifact === '' ? 0 : sortedPlayers[index - 1].artifact;
+                if (artCurr === artPrev) {
+                    rankText = `${index}위(동점)`;
                 } else {
                     rankText = `${index + 1}위`;
                 }
             }
 
             const aliveBadge = p.isAlive 
-                ? `<span class="alive-badge">생존 탈출</span>` 
-                : `<span class="dead-badge">사망 (0점)</span>`;
+                ? `<span class="alive-badge">생존</span>` 
+                : `<span class="dead-badge">사망(0점)</span>`;
 
-            // 유물 점수 칸에 동점 승리 규칙 안내 텍스트 표시
-            let artifactDisplay = `${p.artifact}점`;
+            const artDisplayNum = p.artifact === '' ? 0 : p.artifact;
+            let artifactDisplay = `${artDisplayNum}점`;
             if (index > 0 && p.totalScore === sortedPlayers[index - 1].totalScore) {
-                if (p.artifact > sortedPlayers[index - 1].artifact) {
-                    artifactDisplay += `<span class="tie-note">✨ 유물 우세 승리</span>`;
-                } else if (p.artifact < sortedPlayers[index - 1].artifact) {
+                const artCurr = p.artifact === '' ? 0 : p.artifact;
+                const artPrev = sortedPlayers[index - 1].artifact === '' ? 0 : sortedPlayers[index - 1].artifact;
+                if (artCurr > artPrev) {
+                    artifactDisplay += `<span class="tie-note">✨유물 승리</span>`;
+                } else if (artCurr < artPrev) {
                     artifactDisplay += `<span class="tie-note" style="color:var(--text-muted);">유물 열세</span>`;
                 }
             }
