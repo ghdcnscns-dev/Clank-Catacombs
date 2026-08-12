@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>클랭크 카타콤 실시간 점수판</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        @keyframes fadeOutUp {
+            0% { opacity: 1; transform: translateY(0); }
+            100% { opacity: 0; transform: translateY(-20px); }
+        }
+        .animate-score { animation: fadeOutUp 1.5s ease-out forwards; }
+        /* 던전 느낌의 다크 테마 커스텀 스크롤바 */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col items-center justify-center p-4 selection:bg-amber-600 selection:text-white" style="background-image: radial-gradient(circle at center, #1e1b4b 0%, #020617 100%);">
+
+    <div class="w-full max-w-lg bg-slate-900/90 backdrop-blur-md rounded-2xl shadow-2xl p-6 border border-amber-900/40 relative overflow-hidden">
+        <!-- 던전 무드 장식 요소 -->
+        <div class="absolute -top-10 -right-10 w-32 h-32 bg-amber-600/10 rounded-full blur-2xl pointer-events-none"></div>
+        <div class="absolute -bottom-10 -left-10 w-32 h-32 bg-purple-600/10 rounded-full blur-2xl pointer-events-none"></div>
+
+        <h1 class="text-2xl md:text-3xl font-black text-center mb-6 text-amber-500 tracking-wider flex items-center justify-center gap-2 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
+            <span>🗝️</span> 클랭크 카타콤 : 점수 정산소 <span>🪙</span>
+        </h1>
+
+        <!-- 1. 로비 화면 -->
+        <div id="lobby-section" class="space-y-4">
+            <div class="bg-slate-950/60 p-4 rounded-xl border border-slate-800 space-y-3">
+                <div>
+                    <label class="block text-xs font-bold text-amber-400/80 uppercase mb-1">모험가 닉네임</label>
+                    <input type="text" id="player-name" placeholder="탐험가 이름 입력" class="w-full px-4 py-2.5 rounded-lg bg-slate-900 border border-slate-700 focus:outline-none focus:border-amber-500 text-slate-200 font-medium">
+                </div>
+                
+                <div class="pt-2 border-t border-slate-800/80 space-y-3">
+                    <button onclick="createRoom()" class="w-full bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 font-bold py-3 rounded-lg text-slate-950 transition cursor-pointer shadow-lg shadow-amber-900/20 text-sm tracking-wide">
+                        🕯️ 새로운 던전(방) 개설하기
+                    </button>
+                    
+                    <div class="flex gap-2">
+                        <input type="text" id="room-code-input" placeholder="참가코드 4자리" class="w-1/2 px-4 py-2.5 rounded-lg bg-slate-900 border border-slate-700 uppercase focus:outline-none focus:border-amber-500 text-center font-bold tracking-widest text-amber-400">
+                        <button onclick="joinRoom()" class="w-1/2 bg-gradient-to-r from-blue-700 to-indigo-700 hover:from-blue-600 hover:to-indigo-600 font-bold py-2.5 rounded-lg transition cursor-pointer shadow-lg text-sm tracking-wide">
+                            🚪 던전 입장하기
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. 게임 화면 -->
+        <div id="game-section" class="hidden space-y-5">
+            <!-- 상단 정보 헤더 -->
+            <div class="flex justify-between items-center bg-slate-950/70 p-3.5 rounded-xl border border-amber-900/30">
+                <div>
+                    <span class="text-[10px] text-amber-500/70 font-bold uppercase tracking-wider block">던전 참가 코드</span>
+                    <span id="display-room-code" class="text-xl font-mono font-black text-amber-400 tracking-widest">----</span>
+                </div>
+                <div class="flex items-center gap-3">
+                    <div class="text-right relative">
+                        <span class="text-[10px] text-slate-400 font-bold uppercase block">내 최종 점수</span>
+                        <span id="last-added-score" class="absolute -top-6 right-0 font-bold text-base opacity-0"></span>
+                        <span id="my-score" class="text-2xl font-black text-amber-400 drop-shadow">0점</span>
+                    </div>
+                    <button onclick="leaveRoom()" class="bg-rose-950/80 hover:bg-rose-900 text-rose-300 border border-rose-800/60 px-2.5 py-2 rounded-lg font-bold text-xs transition cursor-pointer">
+                        탈출(나가기)
+                    </button>
+                </div>
+            </div>
+
+            <!-- 점수 정산 입력 폼 (던전 규칙 적용) -->
+            <div class="bg-slate-950/80 p-4 rounded-xl border border-slate-800 space-y-4 shadow-inner">
+                <div class="flex justify-between items-center border-b border-slate-800 pb-2">
+                    <h2 class="text-xs font-bold text-amber-400 uppercase tracking-wide">⚔️ 내 탐험 결과 및 점수 정산</h2>
+                    <span class="text-[11px] text-slate-400">동점 시 <strong class="text-amber-300">유물 점수</strong> 높은 사람 승리</span>
+                </div>
+
+                <!-- 1. 생존 유무 체크 -->
+                <div class="bg-slate-900/90 p-3 rounded-lg border border-slate-800 flex items-center justify-between">
+                    <div>
+                        <span class="text-xs font-bold text-slate-200 block">던전 생존 여부 (심연 탈출 성공)</span>
+                        <span class="text-[10px] text-rose-400">※ 체크하지 않으면 모든 점수 기록 및 획득 불가</span>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="is-survived" onchange="toggleSurvival()" class="sr-only peer">
+                        <div class="w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+                        <span class="ml-2 text-xs font-bold text-slate-300 peer-checked:text-emerald-400" id="survival-label">탈출 실패</span>
+                    </label>
+                </div>
+
+                <!-- 점수 입력 필드들 (생존 여부에 따라 제어) -->
+                <div id="score-inputs-container" class="space-y-3 opacity-40 pointer-events-none transition-opacity duration-200">
+                    
+                    <!-- 2. 임무완수 토큰 -->
+                    <div class="bg-slate-900/60 p-2.5 rounded-lg border border-slate-800 flex items-center justify-between">
+                        <div>
+                            <span class="text-xs font-bold text-slate-300">임무완수 토큰 달성 (+20점)</span>
+                            <span class="text-[10px] text-slate-500 block">조건 만족 시 체크</span>
+                        </div>
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" id="mission-token" onchange="calculateAndUpdateScore()" class="w-4 h-4 rounded bg-slate-800 border-slate-700 text-amber-600 focus:ring-amber-500">
+                            <span class="text-xs font-bold text-amber-400">완료 (+20점)</span>
+                        </label>
+                    </div>
+
+                    <!-- 3. 각종 점수 입력 칸 (깡점수 / 개당 계산) -->
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="block text-[11px] font-medium text-slate-300 mb-1">🏺 유물 점수 (깡점수)</label>
+                            <input type="number" id="input-artifact" value="0" oninput="calculateAndUpdateScore()" placeholder="0" class="w-full px-3 py-1.5 rounded bg-slate-900 border border-slate-700 text-sm font-bold text-amber-300 focus:outline-none focus:border-amber-500">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-medium text-slate-300 mb-1">🪙 금화 개수 (개당 +1점)</label>
+                            <input type="number" id="input-gold" value="0" oninput="calculateAndUpdateScore()" placeholder="0" class="w-full px-3 py-1.5 rounded bg-slate-900 border border-slate-700 text-sm font-bold text-amber-300 focus:outline-none focus:border-amber-500">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-medium text-slate-300 mb-1">💎 토큰 점수 (깡점수)</label>
+                            <input type="number" id="input-token" value="0" oninput="calculateAndUpdateScore()" placeholder="0" class="w-full px-3 py-1.5 rounded bg-slate-900 border border-slate-700 text-sm font-bold text-amber-300 focus:outline-none focus:border-amber-500">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-medium text-slate-300 mb-1">📜 카드 점수 (깡점수)</label>
+                            <input type="number" id="input-card" value="0" oninput="calculateAndUpdateScore()" placeholder="0" class="w-full px-3 py-1.5 rounded bg-slate-900 border border-slate-700 text-sm font-bold text-amber-300 focus:outline-none focus:border-amber-500">
+                        </div>
+                    </div>
+
+                    <!-- 서버 동기화 반영 버튼 -->
+                    <button onclick="commitScore()" class="w-full bg-emerald-700 hover:bg-emerald-600 text-white font-bold py-2.5 rounded-lg text-xs transition cursor-pointer shadow-md uppercase tracking-wider">
+                        ✨ 현재 계산된 점수 던전 서버에 최종 동기화하기
+                    </button>
+                </div>
+            </div>
+
+            <!-- 실시간 순위 보드 -->
+            <div>
+                <h2 class="text-xs font-bold text-amber-400 mb-2 uppercase tracking-wide flex items-center justify-between">
+                    <span>🏆 실시간 던전 탐험 순위</span>
+                    <span class="text-[10px] text-slate-400 font-normal">유물 점수 높을수록 우선순위</span>
+                </h2>
+                <div id="leaderboard" class="space-y-1.5 max-h-44 overflow-y-auto pr-1"></div>
+            </div>
+
+            <!-- 득점/행동 로그 -->
+            <div>
+                <h2 class="text-xs font-bold text-amber-400 mb-1.5 uppercase tracking-wide">📜 탐험 및 득점 기록 로그</h2>
+                <div id="score-log-list" class="space-y-1 max-h-28 overflow-y-auto pr-1 text-[11px] text-slate-400 bg-slate-950/80 p-2.5 rounded-lg border border-slate-800">
+                    <p>던전 문이 열렸습니다. 모험가들을 기다리는 중...</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-6 pt-3 border-t border-slate-800/80 text-center">
+            <p class="text-[11px] text-slate-500">Clank! Catacombs Realtime Scoreboard</p>
+        </div>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://ebgziywanxwxqohxhvam.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImViZ3ppeXdhbnh3eHFvaHhodmFtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY0Njc2MjQsImV4cCI6MjEwMjA0MzYyNH0.FUGQjkx6Hv801UeeE_Ti7XXlVPRiG1bOIuHTEJXDRBA';
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        let currentRoomCode = null;
+        let myPlayerId = null;
+        let myCurrentScore = 0;
+        let myArtifactScore = 0; // 동점자 처리를 위한 유물 점수 저장
+
+        // 생존 유무에 따른 입력 통제 토글
+        function toggleSurvival() {
+            const isSurvived = document.getElementById('is-survived').checked;
+            const container = document.getElementById('score-inputs-container');
+            const label = document.getElementById('survival-label');
+
+            if (isSurvived) {
+                label.innerText = "생존 성공 (점수 기록 가능)";
+                label.classList.remove('text-rose-400');
+                label.classList.add('text-emerald-400');
+                container.classList.remove('opacity-40', 'pointer-events-none');
+            } else {
+                label.innerText = "탈출 실패 (0점 처리)";
+                label.classList.remove('text-emerald-400');
+                label.classList.add('text-rose-400');
+                container.classList.add('opacity-40', 'pointer-events-none');
+                
+                // 탈출 실패 시 입력값 초기화 및 0점 전송
+                document.getElementById('mission-token').checked = false;
+                document.getElementById('input-artifact').value = 0;
+                document.getElementById('input-gold').value = 0;
+                document.getElementById('input-token').value = 0;
+                document.getElementById('input-card').value = 0;
+                calculateAndUpdateScore();
+                commitScore();
+            }
+        }
+
+        // 실시간 점수 계산 로직
+        function calculateAndUpdateScore() {
+            const isSurvived = document.getElementById('is-survived').checked;
+            if (!isSurvived) {
+                myCurrentScore = 0;
+                myArtifactScore = 0;
+                document.getElementById('my-score').innerText = '0점';
+                return;
+            }
+
+            const missionChecked = document.getElementById('mission-token').checked;
+            const artifact = parseInt(document.getElementById('input-artifact').value) || 0;
+            const gold = parseInt(document.getElementById('input-gold').value) || 0;
+            const token = parseInt(document.getElementById('input-token').value) || 0;
+            const card = parseInt(document.getElementById('input-card').value) || 0;
+            const missionBonus = missionChecked ? 20 : 0;
+
+            myArtifactScore = artifact; // 유물 점수 별도 백업
+            myCurrentScore = artifact + gold + token + card + missionBonus;
+            document.getElementById('my-score').innerText = myCurrentScore + '점';
+        }
+
+        // 점수 애니메이션
+        function showScoreAnimation(val) {
+            const el = document.getElementById('last-added-score');
+            el.innerText = `총합 ${val}점 갱신!`;
+            el.className = `absolute -top-6 right-0 font-bold text-base opacity-0 text-amber-400`;
+            el.classList.remove('animate-score');
+            void el.offsetWidth;
+            el.classList.add('animate-score');
+        }
+
+        // 서버에 점수 동기화 및 로그 브로드캐스트
+        async function commitScore() {
+            const isSurvived = document.getElementById('is-survived').checked;
+            calculateAndUpdateScore();
+
+            if (!isSurvived) {
+                myCurrentScore = 0;
+                myArtifactScore = 0;
+            }
+
+            showScoreAnimation(myCurrentScore);
+
+            // DB 업데이트 (score와 artifact_score 동시 저장)
+            await supabaseClient.from('players').update({ 
+                score: myCurrentScore, 
+                artifact_score: myArtifactScore 
+            }).eq('id', myPlayerId);
+
+            const myName = document.getElementById('player-name').value;
+            
+            // 로그 전송
+            supabaseClient.channel('room-channel-' + currentRoomCode).send({
+                type: 'broadcast',
+                event: 'score_log',
+                payload: { 
+                    name: myName, 
+                    score: myCurrentScore, 
+                    survived: isSurvived 
+                }
+            });
+        }
+
+        function generateRoomCode() { return Math.random().toString(36).substring(2, 6).toUpperCase(); }
+        
+        async function createRoom() {
+            const name = document.getElementById('player-name').value.trim();
+            if (!name) { alert('모험가 이름을 입력해주세요!'); return; }
+            const code = generateRoomCode();
+            await supabaseClient.from('rooms').insert([{ code }]);
+            const { data } = await supabaseClient.from('players').insert([{ 
+                room_code: code, 
+                name: name, 
+                score: 0, 
+                artifact_score: 0 
+            }]).select();
+            currentRoomCode = code; myPlayerId = data[0].id; myCurrentScore = 0; myArtifactScore = 0; enterGameUI();
+        }
+
+        async function joinRoom() {
+            const name = document.getElementById('player-name').value.trim();
+            const code = document.getElementById('room-code-input').value.trim().toUpperCase();
+            if (!name || !code) { alert('이름과 참가 코드를 확인해주세요!'); return; }
+            const { data: roomData } = await supabaseClient.from('rooms').select('code').eq('code', code).single();
+            if (!roomData) { alert('존재하지 않는 던전(방)입니다.'); return; }
+            const { data } = await supabaseClient.from('players').insert([{ 
+                room_code: code, 
+                name: name, 
+                score: 0, 
+                artifact_score: 0 
+            }]).select();
+            currentRoomCode = code; myPlayerId = data[0].id; myCurrentScore = 0; myArtifactScore = 0; enterGameUI();
+        }
+
+        function enterGameUI() {
+            document.getElementById('lobby-section').classList.add('hidden');
+            document.getElementById('game-section').classList.remove('hidden');
+            document.getElementById('display-room-code').innerText = currentRoomCode;
+            fetchLeaderboard(); subscribeRealtime();
+        }
+
+        async function fetchLeaderboard() {
+            // 정렬 조건: 1순위 총점(score) 내림차순, 2순위 유물점수(artifact_score) 내림차순
+            const { data } = await supabaseClient
+                .from('players')
+                .select('*')
+                .eq('room_code', currentRoomCode)
+                .order('score', { ascending: false })
+                .order('artifact_score', { ascending: false });
+            if (data) renderLeaderboard(data);
+        }
+
+        function renderLeaderboard(players) {
+            const container = document.getElementById('leaderboard'); 
+            container.innerHTML = '';
+            
+            players.forEach((player, index) => {
+                const isMe = player.id === myPlayerId;
+                const item = document.createElement('div');
+                item.className = `flex justify-between items-center p-2.5 rounded-lg border ${isMe ? 'bg-amber-600/15 border-amber-500/50' : 'bg-slate-900/60 border-slate-800'}`;
+                
+                item.innerHTML = `
+                    <div class="flex items-center gap-2.5">
+                        <span class="w-6 text-center text-sm font-bold ${index === 0 ? 'text-amber-400' : 'text-slate-400'}">${index + 1}위</span>
+                        <div>
+                            <span class="font-bold text-xs text-slate-200">${player.name} ${isMe ? '(나)' : ''}</span>
+                            <span class="text-[10px] text-slate-400 block">유물점수: ${player.artifact_score || 0}점</span>
+                        </div>
+                    </div>
+                    <span class="font-black text-sm text-amber-400">${player.score}점</span>
+                `;
+                container.appendChild(item);
+            });
+        }
+
+        function subscribeRealtime() {
+            const channel = supabaseClient.channel('room-channel-' + currentRoomCode);
+            channel
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'players', filter: `room_code=eq.${currentRoomCode}` }, () => fetchLeaderboard())
+                .on('broadcast', { event: 'score_log' }, (payload) => {
+                    const logList = document.getElementById('score-log-list');
+                    const newLog = document.createElement('p');
+                    
+                    if (payload.payload.survived) {
+                        newLog.innerHTML = `🔥 <strong class="text-slate-200">${payload.payload.name}</strong>님이 점수를 동기화했습니다! (<span class="text-amber-400 font-bold">${payload.payload.score}점</span>)`;
+                    } else {
+                        newLog.innerHTML = `💀 <strong class="text-slate-200">${payload.payload.name}</strong>님이 탈출 실패(0점 처리)했습니다.`;
+                    }
+                    
+                    logList.prepend(newLog);
+                    if (logList.children.length > 15) logList.lastElementChild.remove();
+                })
+                .subscribe();
+        }
+
+        async function leaveRoom() {
+            if (myPlayerId) await supabaseClient.from('players').delete().eq('id', myPlayerId);
+            location.reload();
+        }
+    </script>
+</body>
+</html>
