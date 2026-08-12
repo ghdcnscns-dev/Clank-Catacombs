@@ -36,19 +36,6 @@
             padding: 10px;
         }
 
-        @keyframes screenShake {
-            0% { transform: translate(0, 0) rotate(0deg); }
-            20% { transform: translate(-6px, 4px) rotate(-0.5deg); }
-            40% { transform: translate(6px, -4px) rotate(0.5deg); }
-            60% { transform: translate(-4px, -2px) rotate(-0.3deg); }
-            80% { transform: translate(4px, 2px) rotate(0.3deg); }
-            100% { transform: translate(0, 0) rotate(0deg); }
-        }
-
-        .shake-effect {
-            animation: screenShake 0.4s ease-in-out;
-        }
-
         .container {
             max-width: 100%;
             margin: 0 auto;
@@ -94,6 +81,10 @@
             position: relative;
         }
 
+        .card.hidden {
+            display: none !important;
+        }
+
         .card-header-flex {
             display: flex;
             justify-content: space-between;
@@ -112,11 +103,6 @@
             border: none;
             padding: 0;
             white-space: nowrap;
-        }
-
-        .action-buttons {
-            display: flex;
-            gap: 6px;
         }
 
         input[type="text"], input[type="number"] {
@@ -153,12 +139,6 @@
             transform: scale(0.96);
         }
 
-        .btn-dragon {
-            background: linear-gradient(to bottom, #c0392b, #842016);
-            color: #ffffff;
-            border: 1px solid #e74c3c;
-        }
-
         .btn-danger-subtle {
             background: transparent;
             border: 1px solid var(--danger);
@@ -177,10 +157,6 @@
             flex-direction: column;
             gap: 12px;
             padding: 10px 0;
-        }
-
-        .room-lobby.hidden {
-            display: none;
         }
 
         .room-info-bar {
@@ -415,10 +391,6 @@
         <section class="card" id="scoring-section">
             <div class="card-header-flex">
                 <h2>탐험가 관리</h2>
-                <div class="action-buttons">
-                    <button class="btn-dragon" id="btn-dragon-attack">🐉 드래곤</button>
-                    <button id="btn-add-player">+ 인원추가</button>
-                </div>
             </div>
             <div id="players-scoring-container" class="players-grid"></div>
         </section>
@@ -469,9 +441,6 @@
     const btnLeaveRoom = document.getElementById('btn-leave-room');
 
     const playersScoringContainer = document.getElementById('players-scoring-container');
-    const btnAddPlayer = document.getElementById('btn-add-player');
-    const btnDragonAttack = document.getElementById('btn-dragon-attack');
-    const mainContainer = document.getElementById('main-container');
     const leaderboardBody = document.getElementById('leaderboard-body');
     const scoreLogFeed = document.getElementById('score-log-feed');
 
@@ -520,7 +489,6 @@
         }
 
         let roomData = data.data;
-        // 입장 시 기존 플레이어 목록에 중복되지 않도록 추가하거나 기존 닉네임으로 세팅 가능
         const newId = roomData.players.length > 0 ? Math.max(...roomData.players.map(p => p.id)) + 1 : 0;
         roomData.players.push({
             id: newId,
@@ -587,61 +555,6 @@
         await db.from('clank_rooms').update({ data: sessionData }).eq('room_code', currentRoomCode);
     }
 
-    function playDragonSound() {
-        try {
-            const AudioContext = window.AudioContext || window.webkitAudioContext;
-            if (!AudioContext) return;
-            const ctx = new AudioContext();
-            const osc = ctx.createOscillator();
-            const gainNode = ctx.createGain();
-
-            osc.type = 'sawtooth';
-            osc.frequency.setValueAtTime(130, ctx.currentTime);
-            osc.frequency.exponentialRampToValueAtTime(35, ctx.currentTime + 0.6);
-
-            gainNode.gain.setValueAtTime(0.4, ctx.currentTime);
-            gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.6);
-
-            osc.connect(gainNode);
-            gainNode.connect(ctx.destination);
-
-            osc.start();
-            osc.stop(ctx.currentTime + 0.6);
-        } catch (e) {
-            console.log("AudioContext not supported", e);
-        }
-    }
-
-    btnDragonAttack.addEventListener('click', () => {
-        playDragonSound();
-        mainContainer.classList.remove('shake-effect');
-        void mainContainer.offsetWidth;
-        mainContainer.classList.add('shake-effect');
-        addLog(`[경고] 드래곤 습격 발생! 🔥`);
-    });
-
-    btnAddPlayer.addEventListener('click', () => {
-        const newId = sessionData.players.length > 0 ? Math.max(...sessionData.players.map(p => p.id)) + 1 : 0;
-        const newName = `모험가 ${sessionData.players.length + 1}`;
-        
-        sessionData.players.push({
-            id: newId,
-            name: newName,
-            isAlive: true,
-            mission: false,
-            artifact: '',
-            gold: '',
-            token: '',
-            card: '',
-            totalScore: 0
-        });
-
-        renderScoringCards();
-        updateLeaderboard();
-        addLog(`[시스템] '${newName}' 탐험가가 추가되었습니다.`);
-        saveRoomData();
-    });
-
     window.removePlayer = function(id) {
         const target = sessionData.players.find(p => p.id === id);
         if (target) {
@@ -657,15 +570,17 @@
         playersScoringContainer.innerHTML = '';
         
         if (sessionData.players.length === 0) {
-            playersScoringContainer.innerHTML = `<div style="text-align: center; color: var(--text-muted); padding: 15px; font-size: 0.85rem;">등록된 탐험가가 없습니다. 우측 상단의 '+ 인원추가' 버튼을 눌러주세요.</div>`;
+            playersScoringContainer.innerHTML = `<div style="text-align: center; color: var(--text-muted); padding: 15px; font-size: 0.85rem;">참가한 탐험가가 없습니다.</div>`;
             return;
         }
 
         sessionData.players.forEach(p => {
             const cardDiv = document.createElement('div');
             cardDiv.className = 'player-card';
+            const overlayClass = (p.isAlive || p.overlayDismissed) ? 'hidden' : '';
+
             cardDiv.innerHTML = `
-                <div class="death-overlay ${p.isAlive ? 'hidden' : ''}" data-overlay-id="${p.id}">
+                <div class="death-overlay ${overlayClass}" data-overlay-id="${p.id}">
                     <div class="death-title">사망</div>
                     <button class="btn-close-death" data-id="${p.id}">✕ 닫기</button>
                 </div>
@@ -729,6 +644,7 @@
                 const inputs = card.querySelectorAll('input:not(.input-is-alive):not(.p-name-input)');
                 
                 if (!e.target.checked) {
+                    if (player) player.overlayDismissed = false;
                     overlay.classList.remove('hidden');
                     inputs.forEach(input => {
                         input.disabled = true;
@@ -739,6 +655,7 @@
                         addLog(`[사망] '${player.name}'님이 던전 속에서 사망했습니다... (0점 처리)`);
                     }
                 } else {
+                    if (player) player.overlayDismissed = true;
                     overlay.classList.add('hidden');
                     inputs.forEach(input => input.disabled = false);
                     if (player) {
@@ -751,6 +668,11 @@
 
         document.querySelectorAll('.btn-close-death').forEach(btn => {
             btn.addEventListener('click', (e) => {
+                const id = parseInt(e.target.dataset.id);
+                const player = sessionData.players.find(p => p.id === id);
+                if (player) {
+                    player.overlayDismissed = true;
+                }
                 const card = e.target.closest('.player-card');
                 const overlay = card.querySelector('.death-overlay');
                 overlay.classList.add('hidden');
@@ -889,7 +811,7 @@
         if (!sessionData.logs) sessionData.logs = [];
         const logText = `${new Date().toLocaleTimeString()} - ${message}`;
         sessionData.logs.unshift(logText);
-        if (sessionData.logs.length > 25) sessionData.logs.pop(); // 최대 25개 유지
+        if (sessionData.logs.length > 25) sessionData.logs.pop();
         renderLogs();
         saveRoomData();
     }
