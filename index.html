@@ -354,7 +354,6 @@
         <div class="creator">제작자 : 천상민</div>
     </header>
 
-    <!-- 방 생성 및 참여 로비 섹션 -->
     <section class="card" id="room-lobby-section">
         <h2>게임 방 입장</h2>
         <div class="room-lobby">
@@ -380,14 +379,12 @@
         </div>
     </section>
 
-    <!-- 메인 게임 영역 (방 입장 후 활성화) -->
     <div id="game-content-area" style="display: none;">
         <div class="room-info-bar">
             <span>방 코드: <strong id="display-room-code" style="color: var(--accent-gold); letter-spacing: 1px;"></strong></span>
             <button id="btn-leave-room" class="btn-danger-subtle">나가기</button>
         </div>
 
-        <!-- 점수 기록 섹션 -->
         <section class="card" id="scoring-section">
             <div class="card-header-flex">
                 <h2>내 탐험 기록 관리</h2>
@@ -396,7 +393,6 @@
             <div id="players-scoring-container" class="players-grid"></div>
         </section>
 
-        <!-- 실시간 순위표 및 피드 섹션 -->
         <section class="card" id="dashboard-section">
             <h2>실시간 순위</h2>
             <table class="leaderboard-table">
@@ -421,7 +417,6 @@
 </div>
 
 <script>
-    // Supabase 설정
     const SUPABASE_URL = 'https://dsmglkqlmqxqcamhkfww.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRzbWdsa3FsbXF4cWNhbWhrZnd3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY1MTU4MzEsImV4cCI6MjEwMjA5MTgzMX0.hGZx467Oa4e9p39JMvkNPYfPuAmjQN--7GyNqYiv66o';
     
@@ -553,7 +548,27 @@
         enterRoom(code, roomData);
     });
 
-    btnLeaveRoom.addEventListener('click', () => {
+    btnLeaveRoom.addEventListener('click', async () => {
+        if (currentRoomCode && myPlayerId !== null) {
+            const { data } = await db.from('clank_rooms').select('data').eq('room_code', currentRoomCode).maybeSingle();
+            if (data && data.data) {
+                let roomData = data.data;
+                const leavingPlayer = roomData.players.find(p => p.id === myPlayerId);
+                const playerName = leavingPlayer ? leavingPlayer.name : '모험가';
+
+                roomData.players = roomData.players.filter(p => p.id !== myPlayerId);
+                
+                if (!roomData.logs) roomData.logs = [];
+                roomData.logs.unshift(`[시스템] '${playerName}'님이 방을 나갔습니다.`);
+
+                if (roomData.players.length === 0) {
+                    await db.from('clank_rooms').delete().eq('room_code', currentRoomCode);
+                } else {
+                    await db.from('clank_rooms').update({ data: roomData }).eq('room_code', currentRoomCode);
+                }
+            }
+        }
+
         if (syncInterval) clearInterval(syncInterval);
         currentRoomCode = null;
         myPlayerId = null;
