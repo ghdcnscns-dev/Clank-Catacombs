@@ -59,7 +59,6 @@
             font-size: 1rem;
         }
 
-        /* 섹션 공통 스타일 */
         .card {
             background-color: var(--panel-bg);
             border: 2px solid var(--panel-border);
@@ -78,15 +77,7 @@
             padding-bottom: 8px;
         }
 
-        /* 참여코드 영역 */
-        .code-setup {
-            display: flex;
-            gap: 12px;
-            align-items: center;
-            flex-wrap: wrap;
-        }
-
-        input[type="text"], input[type="number"] {
+        input[type="text"], input[type="number"], select {
             background-color: #0f0b09;
             border: 1px solid var(--panel-border);
             color: var(--text-main);
@@ -95,9 +86,10 @@
             font-size: 1rem;
             outline: none;
             transition: border-color 0.3s;
+            width: 100%;
         }
 
-        input[type="text"]:focus, input[type="number"]:focus {
+        input[type="text"]:focus, input[type="number"]:focus, select:focus {
             border-color: var(--accent-gold);
         }
 
@@ -119,16 +111,6 @@
             transform: translateY(-1px);
         }
 
-        .btn-danger {
-            background: linear-gradient(to bottom, #e74c3c, #c0392b);
-            color: white;
-        }
-
-        .btn-danger:hover {
-            background: linear-gradient(to bottom, #ff6b6b, #e74c3c);
-        }
-
-        /* 플레이어 입력 폼 */
         .player-form-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -166,7 +148,6 @@
             cursor: pointer;
         }
 
-        /* 실시간 순위표 */
         .leaderboard-table {
             width: 100%;
             border-collapse: collapse;
@@ -194,7 +175,6 @@
             font-weight: bold;
         }
 
-        /* 점수 획득 로그 피드 */
         .log-container {
             background-color: #0f0b09;
             border: 1px solid var(--panel-border);
@@ -230,10 +210,6 @@
             color: var(--success);
             font-weight: bold;
         }
-
-        .hidden {
-            display: none !important;
-        }
     </style>
 </head>
 <body>
@@ -244,36 +220,28 @@
         <div class="subtitle">지하 카타콤의 심장부, 실시간 탐험 점수 정산소</div>
     </header>
 
-    <!-- 참여 코드 및 플레이어 세팅 섹션 -->
+    <!-- 탐험가 세팅 섹션 -->
     <section class="card" id="setup-section">
-        <h2>참여 코드 및 탐험가 설정</h2>
-        <div class="code-setup" style="margin-bottom: 20px;">
+        <h2>탐험가 구성 설정</h2>
+        <div class="player-form-grid" style="margin-bottom: 15px;">
             <div class="input-group">
-                <label>참여 코드 입력 (세션 공유용)</label>
-                <input type="text" id="session-code" placeholder="예: CATACOMB-01">
-            </div>
-            <button id="btn-start-session" style="align-self: flex-end;">던전 입장하기</button>
-        </div>
-        <div id="player-config-area" class="hidden">
-            <div class="input-group" style="margin-bottom: 15px;">
                 <label>참여 탐험가 수</label>
-                <input type="number" id="player-count" min="1" max="4" value="2">
+                <input type="number" id="player-count" min="1" max="6" value="2">
             </div>
-            <div id="player-name-inputs" class="player-form-grid" style="margin-bottom: 15px;"></div>
-            <button id="btn-init-players">탐험대 구성 완료</button>
         </div>
+        <div id="player-name-inputs" class="player-form-grid" style="margin-bottom: 15px;"></div>
+        <button id="btn-init-players">탐험대 구성 완료 및 시작</button>
     </section>
 
     <!-- 점수 기록 섹션 -->
-    <section class="card hidden" id="scoring-section">
+    <section class="card" id="scoring-section" style="display:none;">
         <h2>탐험가별 기록 관리</h2>
         <div class="input-group" style="margin-bottom: 15px;">
             <label>기록할 탐험가 선택</label>
-            <select id="active-player-select" style="background-color: #0f0b09; border: 1px solid var(--panel-border); color: var(--text-main); padding: 10px; border-radius: 4px; outline: none;"></select>
+            <select id="active-player-select"></select>
         </div>
 
         <div class="player-form-grid">
-            <!-- 생존 유무 체크 -->
             <div class="input-group" style="grid-column: 1 / -1;">
                 <label class="checkbox-group">
                     <input type="checkbox" id="input-is-alive" checked>
@@ -314,8 +282,8 @@
     </section>
 
     <!-- 실시간 순위표 및 피드 섹션 -->
-    <section class="card hidden" id="dashboard-section">
-        <h2>실시간 던전 탐험 순위 (참여 코드: <span id="display-code" style="color:var(--accent-gold);"></span>)</h2>
+    <section class="card" id="dashboard-section" style="display:none;">
+        <h2>실시간 던전 탐험 순위</h2>
         <table class="leaderboard-table">
             <thead>
                 <tr>
@@ -326,9 +294,7 @@
                     <th>총점</th>
                 </tr>
             </thead>
-            <tbody id="leaderboard-body">
-                <!-- 동적 생성 -->
-            </tbody>
+            <tbody id="leaderboard-body"></tbody>
         </table>
 
         <h2 style="margin-top: 30px;">실시간 점수 변동 피드</h2>
@@ -340,18 +306,13 @@
 
 <script>
     let sessionData = {
-        code: "",
         players: []
     };
 
-    // DOM 요소 캐싱
     const setupSection = document.getElementById('setup-section');
     const scoringSection = document.getElementById('scoring-section');
     const dashboardSection = document.getElementById('dashboard-section');
     
-    const sessionCodeInput = document.getElementById('session-code');
-    const btnStartSession = document.getElementById('btn-start-session');
-    const playerConfigArea = document.getElementById('player-config-area');
     const playerCountInput = document.getElementById('player-count');
     const playerNameInputs = document.getElementById('player-name-inputs');
     const btnInitPlayers = document.getElementById('btn-init-players');
@@ -365,26 +326,9 @@
     const inputCard = document.getElementById('input-card');
     const btnRecordScore = document.getElementById('btn-record-score');
     
-    const displayCode = document.getElementById('display-code');
     const leaderboardBody = document.getElementById('leaderboard-body');
     const scoreLogFeed = document.getElementById('score-log-feed');
 
-    // 1단계: 세션 코드 입력 후 플레이어 수 설정 활성화
-    btnStartSession.addEventListener('click', () => {
-        const code = sessionCodeInput.value.trim();
-        if (!code) {
-            alert('참여 코드를 입력해주세요!');
-            return;
-        }
-        sessionData.code = code;
-        displayCode.textContent = code;
-        playerConfigArea.classList.remove('hidden');
-        sessionCodeInput.disabled = true;
-        btnStartSession.disabled = true;
-        renderPlayerNameInputs();
-    });
-
-    // 플레이어 이름 입력 필드 동적 생성
     function renderPlayerNameInputs() {
         const count = parseInt(playerCountInput.value) || 2;
         playerNameInputs.innerHTML = '';
@@ -399,8 +343,8 @@
     }
 
     playerCountInput.addEventListener('input', renderPlayerNameInputs);
+    renderPlayerNameInputs();
 
-    // 2단계: 탐험가 구성 완료 및 게임 영역 진입
     btnInitPlayers.addEventListener('click', () => {
         const nameInputs = document.querySelectorAll('.p-name-input');
         sessionData.players = [];
@@ -422,9 +366,9 @@
         updatePlayerSelect();
         updateLeaderboard();
         
-        setupSection.classList.add('hidden');
-        scoringSection.classList.remove('hidden');
-        dashboardSection.classList.remove('hidden');
+        setupSection.style.display = 'none';
+        scoringSection.style.display = 'block';
+        dashboardSection.style.display = 'block';
     });
 
     function updatePlayerSelect() {
@@ -438,7 +382,6 @@
         loadPlayerDataToForm(sessionData.players[0].id);
     }
 
-    // 선택된 플레이어의 기존 데이터를 폼에 로드
     activePlayerSelect.addEventListener('change', (e) => {
         loadPlayerDataToForm(parseInt(e.target.value));
     });
@@ -456,7 +399,6 @@
         toggleScoreInputs(!p.isAlive);
     }
 
-    // 생존 체크박스 변경 시 점수 입력 제한 핸들링
     inputIsAlive.addEventListener('change', (e) => {
         toggleScoreInputs(!e.target.checked);
     });
@@ -476,7 +418,6 @@
         }
     }
 
-    // 3단계: 점수 기록 및 실시간 연산
     btnRecordScore.addEventListener('click', () => {
         const selectedId = parseInt(activePlayerSelect.value);
         const p = sessionData.players.find(item => item.id === selectedId);
@@ -501,7 +442,6 @@
             p.card = parseInt(inputCard.value) || 0;
 
             const missionScore = p.mission ? 20 : 0;
-            // 총점 계산: 임무완수(+20) + 유물깡점수 + 금화개당(+1) + 토큰깡점수 + 카드깡점수
             p.totalScore = missionScore + p.artifact + p.gold + p.token + p.card;
 
             addLog(`[기록 갱신] ${p.name}님의 점수가 업데이트되었습니다! (획득 총점: ${p.totalScore}점)`);
@@ -510,9 +450,7 @@
         updateLeaderboard();
     });
 
-    // 실시간 순위 정렬 및 렌더링 (동점 시 유물점수 비교 규칙 적용)
     function updateLeaderboard() {
-        // 정렬 조건: 1. 총점 내림차순, 2. 총점이 같을 경우 유물점수(artifact) 내림차순
         const sortedPlayers = [...sessionData.players].sort((a, b) => {
             if (b.totalScore !== a.totalScore) {
                 return b.totalScore - a.totalScore;
@@ -541,7 +479,6 @@
         });
     }
 
-    // 로그 피드 추가 함수
     function addLog(message) {
         const div = document.createElement('div');
         div.className = 'log-item';
