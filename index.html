@@ -436,8 +436,7 @@
 
     function initDefaultPlayers() {
         sessionData.players = [
-            { id: 0, name: "모험가 1", isAlive: true, mission: false, artifact: '', gold: '', token: '', card: '', totalScore: 0 },
-            { id: 1, name: "모험가 2", isAlive: true, mission: false, artifact: '', gold: '', token: '', card: '', totalScore: 0 }
+            { id: 0, name: "모험가 1", isAlive: true, mission: false, artifact: '', gold: '', token: '', card: '', totalScore: 0 }
         ];
         renderScoringCards();
         updateLeaderboard();
@@ -560,6 +559,10 @@
                 }
                 recalculateAndNotify();
             });
+        });
+
+        document.querySelectorAll('.input-mission').forEach(chk => {
+            chk.addEventListener('change', recalculateAndNotify);
         });
 
         document.querySelectorAll('.btn-close-death').forEach(btn => {
