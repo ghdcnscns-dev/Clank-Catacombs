@@ -33,6 +33,20 @@
             padding: 20px;
         }
 
+        /* 화면 흔들림 애니메이션 효과 */
+        @keyframes screenShake {
+            0% { transform: translate(0, 0) rotate(0deg); }
+            20% { transform: translate(-6px, 4px) rotate(-0.5deg); }
+            40% { transform: translate(6px, -4px) rotate(0.5deg); }
+            60% { transform: translate(-4px, -2px) rotate(-0.3deg); }
+            80% { transform: translate(4px, 2px) rotate(0.3deg); }
+            100% { transform: translate(0, 0) rotate(0deg); }
+        }
+
+        .shake-effect {
+            animation: screenShake 0.4s ease-in-out;
+        }
+
         .container {
             max-width: 1200px;
             margin: 0 auto;
@@ -69,13 +83,29 @@
             position: relative;
         }
 
+        .card-header-flex {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--panel-border);
+            padding-bottom: 8px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
         h2 {
             font-family: 'Cinzel', serif;
             color: var(--accent-gold);
             font-size: 1.3rem;
-            margin-bottom: 15px;
-            border-bottom: 1px solid var(--panel-border);
-            padding-bottom: 8px;
+            margin: 0;
+            border: none;
+            padding: 0;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
         }
 
         input[type="text"], input[type="number"] {
@@ -98,10 +128,10 @@
             background: linear-gradient(to bottom, #d4af37, #997a15);
             color: #0c0908;
             border: none;
-            padding: 10px 20px;
+            padding: 8px 16px;
             border-radius: 4px;
             font-weight: bold;
-            font-size: 1rem;
+            font-size: 0.95rem;
             cursor: pointer;
             box-shadow: 0 4px 6px rgba(0,0,0,0.4);
             transition: all 0.2s;
@@ -112,22 +142,27 @@
             transform: translateY(-1px);
         }
 
-        .player-form-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            margin-bottom: 15px;
+        .btn-dragon {
+            background: linear-gradient(to bottom, #c0392b, #842016);
+            color: #ffffff;
+            border: 1px solid #e74c3c;
         }
 
-        .input-group {
-            display: flex;
-            flex-direction: column;
-            gap: 5px;
+        .btn-dragon:hover {
+            background: linear-gradient(to bottom, #e74c3c, #a93226);
         }
 
-        .input-group label {
-            font-size: 0.9rem;
-            color: var(--text-muted);
+        .btn-danger-subtle {
+            background: transparent;
+            border: 1px solid var(--danger);
+            color: var(--danger);
+            padding: 4px 8px;
+            font-size: 0.8rem;
+        }
+
+        .btn-danger-subtle:hover {
+            background-color: var(--danger);
+            color: white;
         }
 
         .players-grid {
@@ -182,6 +217,17 @@
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 8px;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .input-group label {
+            font-size: 0.85rem;
+            color: var(--text-muted);
         }
 
         .death-overlay {
@@ -264,6 +310,13 @@
             font-weight: bold;
         }
 
+        .tie-note {
+            font-size: 0.75rem;
+            color: var(--accent-gold);
+            display: block;
+            margin-top: 2px;
+        }
+
         .log-container {
             background-color: #0f0b09;
             border: 1px solid var(--panel-border);
@@ -303,33 +356,26 @@
 </head>
 <body>
 
-<div class="container">
+<div class="container" id="main-container">
     <header>
         <h1>CLANK! CATACOMBS</h1>
         <div class="subtitle">지하 카타콤의 심장부, 실시간 탐험 점수 정산소</div>
     </header>
 
-    <!-- 탐험가 세팅 섹션 -->
-    <section class="card" id="setup-section">
-        <h2>탐험가 구성 설정</h2>
-        <div class="player-form-grid" style="margin-bottom: 15px;">
-            <div class="input-group">
-                <label>참여 탐험가 수</label>
-                <input type="number" id="player-count" min="1" max="6" value="2">
+    <!-- 점수 기록 섹션 -->
+    <section class="card" id="scoring-section">
+        <div class="card-header-flex">
+            <h2>탐험가별 실시간 기록 관리</h2>
+            <div class="action-buttons">
+                <button class="btn-dragon" id="btn-dragon-attack">🐉 드래곤 공격!</button>
+                <button id="btn-add-player">+ 인원 추가</button>
             </div>
         </div>
-        <div id="player-name-inputs" class="player-form-grid" style="margin-bottom: 15px;"></div>
-        <button id="btn-init-players">탐험대 구성 완료 및 시작</button>
-    </section>
-
-    <!-- 점수 기록 섹션 (실시간 자동 반영) -->
-    <section class="card" id="scoring-section" style="display:none;">
-        <h2>탐험가별 실시간 기록 관리</h2>
         <div id="players-scoring-container" class="players-grid"></div>
     </section>
 
     <!-- 실시간 순위표 및 피드 섹션 -->
-    <section class="card" id="dashboard-section" style="display:none;">
+    <section class="card" id="dashboard-section">
         <h2>실시간 던전 탐험 순위</h2>
         <table class="leaderboard-table">
             <thead>
@@ -346,7 +392,7 @@
 
         <h2 style="margin-top: 30px;">실시간 점수 변동 피드</h2>
         <div class="log-container" id="score-log-feed">
-            <div class="log-item">[시스템] 카타콤 던전 탐험이 시작되었습니다. 점수를 입력하면 실시간으로 합산됩니다.</div>
+            <div class="log-item">[시스템] 카타콤 던전 탐험이 시작되었습니다. 인원을 추가하고 점수를 입력해 주세요.</div>
         </div>
     </section>
 </div>
@@ -356,62 +402,102 @@
         players: []
     };
 
-    const setupSection = document.getElementById('setup-section');
-    const scoringSection = document.getElementById('scoring-section');
-    const dashboardSection = document.getElementById('dashboard-section');
-    
-    const playerCountInput = document.getElementById('player-count');
-    const playerNameInputs = document.getElementById('player-name-inputs');
-    const btnInitPlayers = document.getElementById('btn-init-players');
-    
     const playersScoringContainer = document.getElementById('players-scoring-container');
+    const btnAddPlayer = document.getElementById('btn-add-player');
+    const btnDragonAttack = document.getElementById('btn-dragon-attack');
+    const mainContainer = document.getElementById('main-container');
     const leaderboardBody = document.getElementById('leaderboard-body');
     const scoreLogFeed = document.getElementById('score-log-feed');
 
-    function renderPlayerNameInputs() {
-        const count = parseInt(playerCountInput.value) || 2;
-        playerNameInputs.innerHTML = '';
-        for (let i = 0; i < count; i++) {
-            playerNameInputs.innerHTML += `
-                <div class="input-group">
-                    <label>탐험가 ${i + 1} 이름</label>
-                    <input type="text" class="p-name-input" value="모험가 ${i + 1}">
-                </div>
-            `;
+    // 웹 오디오 API를 활용한 다크 판타지풍의 저음 타격음/경고음 생성기
+    function playDragonSound() {
+        try {
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            if (!AudioContext) return;
+            const ctx = new AudioContext();
+
+            // 저음의 웅장한 드래곤 포효/공격 사운드 (오실레이터 활용)
+            const osc = ctx.createOscillator();
+            const gainNode = ctx.createGain();
+
+            osc.type = 'sawtooth';
+            // 주파수를 낮게 시작해서 뚝 떨어지게 설정하여 웅장한 괴수 느낌 연출
+            osc.frequency.setValueAtTime(130, ctx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(35, ctx.currentTime + 0.6);
+
+            gainNode.gain.setValueAtTime(0.4, ctx.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.6);
+
+            osc.connect(gainNode);
+            gainNode.connect(ctx.destination);
+
+            osc.start();
+            osc.stop(ctx.currentTime + 0.6);
+        } catch (e) {
+            console.log("AudioContext not allowed or supported without user interaction", e);
         }
     }
 
-    playerCountInput.addEventListener('input', renderPlayerNameInputs);
-    renderPlayerNameInputs();
-
-    btnInitPlayers.addEventListener('click', () => {
-        const nameInputs = document.querySelectorAll('.p-name-input');
-        sessionData.players = [];
+    // 드래곤 공격 버튼 이벤트: 화면 흔들림 + 사운드 + 로그 추가
+    btnDragonAttack.addEventListener('click', () => {
+        playDragonSound();
         
-        nameInputs.forEach((input, index) => {
-            sessionData.players.push({
-                id: index,
-                name: input.value.trim() || `모험가 ${index + 1}`,
-                isAlive: true,
-                mission: false,
-                artifact: 0,
-                gold: 0,
-                token: 0,
-                card: 0,
-                totalScore: 0
-            });
+        // 화면 흔들림 효과 트리거
+        mainContainer.classList.remove('shake-effect');
+        void mainContainer.offsetWidth; // reflow 강제 유발로 애니메이션 재실행
+        mainContainer.classList.add('shake-effect');
+
+        addLog(`[경고] 드래곤이 카타콤을 습격했습니다! 모두 주의하세요! 🔥`);
+    });
+
+    function initDefaultPlayers() {
+        sessionData.players = [
+            { id: 0, name: "모험가 1", isAlive: true, mission: false, artifact: 0, gold: 0, token: 0, card: 0, totalScore: 0 },
+            { id: 1, name: "모험가 2", isAlive: true, mission: false, artifact: 0, gold: 0, token: 0, card: 0, totalScore: 0 }
+        ];
+        renderScoringCards();
+        updateLeaderboard();
+    }
+
+    btnAddPlayer.addEventListener('click', () => {
+        const newId = sessionData.players.length > 0 ? Math.max(...sessionData.players.map(p => p.id)) + 1 : 0;
+        const newName = `모험가 ${sessionData.players.length + 1}`;
+        
+        sessionData.players.push({
+            id: newId,
+            name: newName,
+            isAlive: true,
+            mission: false,
+            artifact: 0,
+            gold: 0,
+            token: 0,
+            card: 0,
+            totalScore: 0
         });
 
         renderScoringCards();
         updateLeaderboard();
-        
-        setupSection.style.display = 'none';
-        scoringSection.style.display = 'block';
-        dashboardSection.style.display = 'block';
+        addLog(`[시스템] 새로운 탐험가 '${newName}'가 합류했습니다.`);
     });
+
+    window.removePlayer = function(id) {
+        const target = sessionData.players.find(p => p.id === id);
+        if (target) {
+            sessionData.players = sessionData.players.filter(p => p.id !== id);
+            renderScoringCards();
+            updateLeaderboard();
+            addLog(`[시스템] 탐험가 '${target.name}'가 제외되었습니다.`);
+        }
+    };
 
     function renderScoringCards() {
         playersScoringContainer.innerHTML = '';
+        
+        if (sessionData.players.length === 0) {
+            playersScoringContainer.innerHTML = `<div style="grid-column: 1/-1; text-align: center; color: var(--text-muted); padding: 20px;">등록된 탐험가가 없습니다. 상단의 '+ 인원 추가' 버튼을 눌러주세요.</div>`;
+            return;
+        }
+
         sessionData.players.forEach(p => {
             const cardDiv = document.createElement('div');
             cardDiv.className = 'player-card';
@@ -422,7 +508,8 @@
                 </div>
 
                 <div class="player-card-header">
-                    <span>${p.name}</span>
+                    <input type="text" class="p-name-input" data-id="${p.id}" value="${p.name}" style="background:transparent; border:none; color:var(--accent-gold); font-family:'Cinzel', serif; font-size:1.1rem; width:120px;" placeholder="이름 입력">
+                    <button class="btn-danger-subtle" onclick="removePlayer(${p.id})">삭제</button>
                 </div>
                 <label class="checkbox-group">
                     <input type="checkbox" class="input-is-alive" data-id="${p.id}" ${p.isAlive ? 'checked' : ''}>
@@ -454,18 +541,27 @@
             playersScoringContainer.appendChild(cardDiv);
         });
 
-        // 입력값 변경 시 즉시 계산 및 반영 (실시간 리스너 추가)
         attachLiveEventListeners();
     }
 
     function attachLiveEventListeners() {
-        // 생존 체크박스 이벤트 핸들러
+        document.querySelectorAll('.p-name-input').forEach(input => {
+            input.addEventListener('input', (e) => {
+                const id = parseInt(e.target.dataset.id);
+                const player = sessionData.players.find(p => p.id === id);
+                if (player) {
+                    player.name = e.target.value.trim() || `모험가`;
+                    updateLeaderboard();
+                }
+            });
+        });
+
         document.querySelectorAll('.input-is-alive').forEach(chk => {
             chk.addEventListener('change', (e) => {
                 const id = parseInt(e.target.dataset.id);
                 const card = e.target.closest('.player-card');
                 const overlay = card.querySelector('.death-overlay');
-                const inputs = card.querySelectorAll('input:not(.input-is-alive)');
+                const inputs = card.querySelectorAll('input:not(.input-is-alive):not(.p-name-input)');
                 
                 if (!e.target.checked) {
                     overlay.classList.remove('hidden');
@@ -482,7 +578,6 @@
             });
         });
 
-        // 사망 오버레이 닫기(X) 버튼 이벤트 핸들러
         document.querySelectorAll('.btn-close-death').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const id = parseInt(e.target.dataset.id);
@@ -492,9 +587,8 @@
             });
         });
 
-        // 기타 점수 및 임무 입력 필드 실시간 반영 리스너
         playersScoringContainer.querySelectorAll('input').forEach(input => {
-            if (!input.classList.contains('input-is-alive')) {
+            if (!input.classList.contains('input-is-alive') && !input.classList.contains('p-name-input')) {
                 input.addEventListener('input', recalculateAndNotify);
                 input.addEventListener('change', recalculateAndNotify);
             }
@@ -502,8 +596,9 @@
     }
 
     function recalculateAndNotify() {
-        sessionData.players.forEach(p => {
-            const card = playersScoringContainer.querySelector(`[data-id="${p.id}"].input-is-alive`).closest('.player-card');
+        sessionData.players.export = sessionData.players.forEach(p => {
+            const card = playersScoringContainer.querySelector(`[data-id="${p.id}"].input-is-alive`)?.closest('.player-card');
+            if (!card) return;
             
             const isAlive = card.querySelector('.input-is-alive').checked;
             p.isAlive = isAlive;
@@ -531,6 +626,7 @@
     }
 
     function updateLeaderboard() {
+        // 클랭크 규칙: 1순위 총점, 동점시 2순위 유물 점수가 더 높은 사람이 승리(상위 정렬)
         const sortedPlayers = [...sessionData.players].sort((a, b) => {
             if (b.totalScore !== a.totalScore) {
                 return b.totalScore - a.totalScore;
@@ -539,20 +635,47 @@
         });
 
         leaderboardBody.innerHTML = '';
+        
+        if (sortedPlayers.length === 0) {
+            leaderboardBody.innerHTML = `<tr><td colspan="5" style="color: var(--text-muted);">표시할 순위 데이터가 없습니다.</td></tr>`;
+            return;
+        }
+
+        // 동점자 체크 로직 (총점과 유물 점수가 모두 같은 경우 공동 순위 판정용)
         sortedPlayers.forEach((p, index) => {
             const tr = document.createElement('tr');
             if (index === 0) tr.classList.add('rank-1');
 
-            const rankText = `${index + 1}위`;
+            let rankText = `${index + 1}위`;
+
+            // 바로 앞 사람과 총점이 같을 경우 동점 규칙 적용 설명 추가
+            if (index > 0 && sortedPlayers[index].totalScore === sortedPlayers[index - 1].totalScore) {
+                if (sortedPlayers[index].artifact === sortedPlayers[index - 1].artifact) {
+                    rankText = `${index}위 (동점)`;
+                } else {
+                    rankText = `${index + 1}위`;
+                }
+            }
+
             const aliveBadge = p.isAlive 
                 ? `<span class="alive-badge">생존 탈출</span>` 
                 : `<span class="dead-badge">사망 (0점)</span>`;
+
+            // 유물 점수 칸에 동점 승리 규칙 안내 텍스트 표시
+            let artifactDisplay = `${p.artifact}점`;
+            if (index > 0 && p.totalScore === sortedPlayers[index - 1].totalScore) {
+                if (p.artifact > sortedPlayers[index - 1].artifact) {
+                    artifactDisplay += `<span class="tie-note">✨ 유물 우세 승리</span>`;
+                } else if (p.artifact < sortedPlayers[index - 1].artifact) {
+                    artifactDisplay += `<span class="tie-note" style="color:var(--text-muted);">유물 열세</span>`;
+                }
+            }
 
             tr.innerHTML = `
                 <td>${rankText}</td>
                 <td>${p.name}</td>
                 <td>${aliveBadge}</td>
-                <td>${p.artifact}점</td>
+                <td>${artifactDisplay}</td>
                 <td><strong>${p.totalScore}점</strong></td>
             `;
             leaderboardBody.appendChild(tr);
@@ -565,6 +688,8 @@
         div.textContent = `${new Date().toLocaleTimeString()} - ${message}`;
         scoreLogFeed.prepend(div);
     }
+
+    initDefaultPlayers();
 </script>
 
 </body>
