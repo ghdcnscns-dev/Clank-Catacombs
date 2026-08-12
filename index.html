@@ -3,15 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>클랭크 카타콤 (Clank! Catacombs) 실시간 점수판</title>
+    <title>클랭크 카타콤 (Clank! Catacombs) 점수계산기</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        @keyframes fadeOutUp {
-            0% { opacity: 1; transform: translateY(0); }
-            100% { opacity: 0; transform: translateY(-20px); }
-        }
-        .animate-score { animation: fadeOutUp 1.5s ease-out forwards; }
         .dungeon-bg {
             background: linear-gradient(135deg, #09090b 0%, #18181b 50%, #270e0e 100%);
         }
@@ -19,172 +13,121 @@
 </head>
 <body class="dungeon-bg text-slate-100 min-h-screen flex flex-col items-center justify-center p-4">
 
-    <div class="w-full max-w-md bg-zinc-900/90 rounded-2xl shadow-2xl p-6 border border-zinc-700/80 backdrop-blur-md">
-        <h1 class="text-2xl font-black text-center mb-6 text-red-500 tracking-wider">🗡️ 클랭크 카타콤 탐험대</h1>
+    <div class="w-full max-w-md bg-zinc-900/90 rounded-2xl shadow-2xl p-6 border border-zinc-700/80 backdrop-blur-md space-y-5">
+        <h1 class="text-2xl font-black text-center text-red-500 tracking-wider">🗡️ 클랭크 카타콤 점수계산기</h1>
 
-        <!-- 1. 로비 화면 -->
-        <div id="lobby-section" class="space-y-4">
+        <!-- 상단 점수 표시 및 계산기 버튼 -->
+        <div class="flex justify-between items-center bg-zinc-800/60 p-3.5 rounded-xl border border-zinc-700/60">
             <div>
-                <label class="block text-sm font-medium text-zinc-400 mb-1">모험가 닉네임</label>
-                <input type="text" id="player-name" placeholder="닉네임 입력" class="w-full px-4 py-2.5 rounded-lg bg-zinc-800 border border-zinc-700 focus:outline-none focus:border-red-500 text-zinc-100">
+                <span class="text-xs text-zinc-400 block">탐험 결과</span>
+                <span class="text-sm font-bold text-zinc-200">개인 정산 모드</span>
+            </div>
+            <div class="flex items-center gap-3">
+                <div class="text-right">
+                    <span class="text-xs text-zinc-400 block">최종 점수</span>
+                    <span id="my-score" class="text-2xl font-black text-amber-400">0점</span>
+                </div>
+                <button onclick="toggleCalculator()" class="bg-zinc-700 hover:bg-zinc-600 text-amber-400 px-2.5 py-2 rounded-lg font-bold text-xs transition cursor-pointer flex flex-col items-center justify-center gap-0.5 shadow">
+                    <span>🧮</span>
+                    <span>계산기</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- 미니 계산기 패널 -->
+        <div id="calculator-panel" style="display: none;" class="bg-zinc-950 p-3 rounded-xl border border-amber-500/40 space-y-2.5 shadow-2xl">
+            <div class="flex justify-between items-center pb-1 border-b border-zinc-800">
+                <span class="text-xs font-bold text-amber-400">🧮 탐험 계산기</span>
+                <button onclick="toggleCalculator()" class="text-zinc-400 hover:text-white text-xs font-bold cursor-pointer">✕ 닫기</button>
             </div>
             
-            <div class="pt-2 border-t border-zinc-800 space-y-3">
-                <button onclick="createRoom()" class="w-full bg-red-600 hover:bg-red-700 font-bold py-3 rounded-lg text-white transition cursor-pointer shadow-lg shadow-red-900/40">
-                    던전 방 만들기 (참가코드 생성)
-                </button>
-                
-                <div class="flex gap-2">
-                    <input type="text" id="room-code-input" placeholder="참가코드 4자리" class="w-1/2 px-4 py-2.5 rounded-lg bg-zinc-800 border border-zinc-700 uppercase focus:outline-none focus:border-red-500 text-center font-bold tracking-widest text-zinc-100">
-                    <button onclick="joinRoom()" class="w-1/2 bg-zinc-700 hover:bg-zinc-600 font-bold py-2.5 rounded-lg transition cursor-pointer text-zinc-200">
-                        던전 입장하기
-                    </button>
-                </div>
+            <div id="calc-display" class="w-full bg-zinc-900 text-right px-3 py-2 rounded-lg font-mono text-xl font-bold text-amber-300 border border-zinc-800 overflow-x-auto">
+                0
+            </div>
+
+            <div class="grid grid-cols-4 gap-1.5">
+                <button onclick="calcClear()" class="bg-red-950 hover:bg-red-900 py-2 rounded font-bold text-sm text-red-200 transition cursor-pointer">C</button>
+                <button onclick="calcAppend('/')" class="bg-zinc-800 hover:bg-zinc-700 py-2 rounded font-bold text-base transition cursor-pointer text-amber-400">÷</button>
+                <button onclick="calcAppend('*')" class="bg-zinc-800 hover:bg-zinc-700 py-2 rounded font-bold text-base transition cursor-pointer text-amber-400">×</button>
+                <button onclick="calcAppend('-')" class="bg-zinc-800 hover:bg-zinc-700 py-2 rounded font-bold text-base transition cursor-pointer text-amber-400">-</button>
+
+                <button onclick="calcAppend('7')" class="bg-zinc-800 hover:bg-zinc-700 py-2 rounded font-bold text-base transition cursor-pointer">7</button>
+                <button onclick="calcAppend('8')" class="bg-zinc-800 hover:bg-zinc-700 py-2 rounded font-bold text-base transition cursor-pointer">8</button>
+                <button onclick="calcAppend('9')" class="bg-zinc-800 hover:bg-zinc-700 py-2 rounded font-bold text-base transition cursor-pointer">9</button>
+                <button onclick="calcAppend('+')" class="bg-zinc-800 hover:bg-zinc-700 py-2 rounded font-bold text-base transition cursor-pointer text-amber-400">+</button>
+
+                <button onclick="calcAppend('4')" class="bg-zinc-800 hover:bg-zinc-700 py-2 rounded font-bold text-base transition cursor-pointer">4</button>
+                <button onclick="calcAppend('5')" class="bg-zinc-800 hover:bg-zinc-700 py-2 rounded font-bold text-base transition cursor-pointer">5</button>
+                <button onclick="calcAppend('6')" class="bg-zinc-800 hover:bg-zinc-700 py-2 rounded font-bold text-base transition cursor-pointer">6</button>
+                <button onclick="calcCalculate()" class="bg-emerald-700 hover:bg-emerald-600 py-2 rounded font-bold text-base transition cursor-pointer text-white row-span-2">=</button>
+
+                <button onclick="calcAppend('1')" class="bg-zinc-800 hover:bg-zinc-700 py-2 rounded font-bold text-base transition cursor-pointer">1</button>
+                <button onclick="calcAppend('2')" class="bg-zinc-800 hover:bg-zinc-700 py-2 rounded font-bold text-base transition cursor-pointer">2</button>
+                <button onclick="calcAppend('3')" class="bg-zinc-800 hover:bg-zinc-700 py-2 rounded font-bold text-base transition cursor-pointer">3</button>
+
+                <button onclick="calcAppend('0')" class="col-span-2 bg-zinc-800 hover:bg-zinc-700 py-2 rounded font-bold text-base transition cursor-pointer">0</button>
+                <button onclick="calcAppend('.')" class="bg-zinc-800 hover:bg-zinc-700 py-2 rounded font-bold text-base transition cursor-pointer">.</button>
             </div>
         </div>
 
-        <!-- 2. 게임 화면 -->
-        <div id="game-section" class="hidden space-y-5">
-            <!-- 상단 정보 및 계산기 버튼 -->
-            <div class="flex justify-between items-center bg-zinc-800/60 p-3.5 rounded-xl border border-zinc-700/60">
+        <!-- 점수 입력 섹션 -->
+        <div class="bg-zinc-800/40 p-4 rounded-xl border border-zinc-700/60 space-y-4">
+            <h2 class="text-sm font-bold text-red-400 flex items-center gap-1.5">
+                <span>🗝️</span> 탈출 및 점수 정산
+            </h2>
+
+            <!-- 1단계: 생존 유무 체크 -->
+            <div class="bg-zinc-900/70 p-3 rounded-lg border border-zinc-700/50 flex items-center justify-between">
                 <div>
-                    <span class="text-xs text-zinc-400 block">던전 코드</span>
-                    <span id="display-room-code" class="text-xl font-mono font-bold text-red-400 tracking-wider">----</span>
+                    <span class="text-sm font-bold text-zinc-200 block">탈출 생존 여부</span>
+                    <span class="text-xs text-zinc-400">체크해야만 점수 기록 및 연산이 가능합니다.</span>
                 </div>
-                <div class="flex items-center gap-3">
-                    <div class="text-right relative">
-                        <span class="text-xs text-zinc-400 block">나의 최종 점수</span>
-                        <span id="last-added-score" class="absolute -top-6 right-0 font-bold text-lg opacity-0"></span>
-                        <span id="my-score" class="text-2xl font-black text-amber-400">0점</span>
-                    </div>
-                    <button onclick="toggleCalculator()" class="bg-zinc-700 hover:bg-zinc-600 text-amber-400 px-2.5 py-2 rounded-lg font-bold text-xs transition cursor-pointer flex flex-col items-center justify-center gap-0.5 shadow">
-                        <span>🧮</span>
-                        <span>계산기</span>
-                    </button>
+                <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" id="survival-check" onchange="toggleSurvival()" class="sr-only peer">
+                    <div class="w-11 h-6 bg-zinc-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+                </label>
+            </div>
+
+            <!-- 2단계: 임무완수 토큰 체크 -->
+            <div class="bg-zinc-900/70 p-3 rounded-lg border border-zinc-700/50 flex items-center justify-between">
+                <div>
+                    <span class="text-sm font-bold text-zinc-200 block">임무 완료 토큰 달성</span>
+                    <span class="text-xs text-zinc-400">조건 만족 시 체크 (+20점 획득)</span>
+                </div>
+                <input type="checkbox" id="quest-check" onchange="calculateTotalScore()" disabled class="w-5 h-5 accent-red-600 cursor-not-allowed">
+            </div>
+
+            <!-- 3단계: 세부 점수 입력 항목들 -->
+            <div class="grid grid-cols-2 gap-2.5">
+                <div>
+                    <label class="block text-xs text-zinc-400 mb-1">유물 점수 (깡점수)</label>
+                    <input type="number" id="artifact-score" value="0" oninput="calculateTotalScore()" disabled class="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-zinc-400 font-bold text-center cursor-not-allowed">
+                </div>
+                <div>
+                    <label class="block text-xs text-zinc-400 mb-1">금화 개수 (+1점/개)</label>
+                    <input type="number" id="gold-score" value="0" oninput="calculateTotalScore()" disabled class="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-zinc-400 font-bold text-center cursor-not-allowed">
+                </div>
+                <div>
+                    <label class="block text-xs text-zinc-400 mb-1">기타 토큰 점수</label>
+                    <input type="number" id="token-score" value="0" oninput="calculateTotalScore()" disabled class="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-zinc-400 font-bold text-center cursor-not-allowed">
+                </div>
+                <div>
+                    <label class="block text-xs text-zinc-400 mb-1">카드 점수 (깡점수)</label>
+                    <input type="number" id="card-score" value="0" oninput="calculateTotalScore()" disabled class="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-zinc-400 font-bold text-center cursor-not-allowed">
                 </div>
             </div>
 
-            <!-- 미니 계산기 패널 -->
-            <div id="calculator-panel" style="display: none;" class="bg-zinc-950 p-3 rounded-xl border border-amber-500/40 space-y-2.5 shadow-2xl">
-                <div class="flex justify-between items-center pb-1 border-b border-zinc-800">
-                    <span class="text-xs font-bold text-amber-400">🧮 탐험 계산기</span>
-                    <button onclick="toggleCalculator()" class="text-zinc-400 hover:text-white text-xs font-bold cursor-pointer">✕ 닫기</button>
-                </div>
-                
-                <div id="calc-display" class="w-full bg-zinc-900 text-right px-3 py-2 rounded-lg font-mono text-xl font-bold text-amber-300 border border-zinc-800 overflow-x-auto">
-                    0
-                </div>
-
-                <div class="grid grid-cols-4 gap-1.5">
-                    <button onclick="calcClear()" class="bg-red-950 hover:bg-red-900 py-2 rounded font-bold text-sm text-red-200 transition cursor-pointer">C</button>
-                    <button onclick="calcAppend('/')" class="bg-zinc-800 hover:bg-zinc-700 py-2 rounded font-bold text-base transition cursor-pointer text-amber-400">÷</button>
-                    <button onclick="calcAppend('*')" class="bg-zinc-800 hover:bg-zinc-700 py-2 rounded font-bold text-base transition cursor-pointer text-amber-400">×</button>
-                    <button onclick="calcAppend('-')" class="bg-zinc-800 hover:bg-zinc-700 py-2 rounded font-bold text-base transition cursor-pointer text-amber-400">-</button>
-
-                    <button onclick="calcAppend('7')" class="bg-zinc-800 hover:bg-zinc-700 py-2 rounded font-bold text-base transition cursor-pointer">7</button>
-                    <button onclick="calcAppend('8')" class="bg-zinc-800 hover:bg-zinc-700 py-2 rounded font-bold text-base transition cursor-pointer">8</button>
-                    <button onclick="calcAppend('9')" class="bg-zinc-800 hover:bg-zinc-700 py-2 rounded font-bold text-base transition cursor-pointer">9</button>
-                    <button onclick="calcAppend('+')" class="bg-zinc-800 hover:bg-zinc-700 py-2 rounded font-bold text-base transition cursor-pointer text-amber-400">+</button>
-
-                    <button onclick="calcAppend('4')" class="bg-zinc-800 hover:bg-zinc-700 py-2 rounded font-bold text-base transition cursor-pointer">4</button>
-                    <button onclick="calcAppend('5')" class="bg-zinc-800 hover:bg-zinc-700 py-2 rounded font-bold text-base transition cursor-pointer">5</button>
-                    <button onclick="calcAppend('6')" class="bg-zinc-800 hover:bg-zinc-700 py-2 rounded font-bold text-base transition cursor-pointer">6</button>
-                    <button onclick="calcCalculate()" class="bg-emerald-700 hover:bg-emerald-600 py-2 rounded font-bold text-base transition cursor-pointer text-white row-span-2">=</button>
-
-                    <button onclick="calcAppend('1')" class="bg-zinc-800 hover:bg-zinc-700 py-2 rounded font-bold text-base transition cursor-pointer">1</button>
-                    <button onclick="calcAppend('2')" class="bg-zinc-800 hover:bg-zinc-700 py-2 rounded font-bold text-base transition cursor-pointer">2</button>
-                    <button onclick="calcAppend('3')" class="bg-zinc-800 hover:bg-zinc-700 py-2 rounded font-bold text-base transition cursor-pointer">3</button>
-
-                    <button onclick="calcAppend('0')" class="col-span-2 bg-zinc-800 hover:bg-zinc-700 py-2 rounded font-bold text-base transition cursor-pointer">0</button>
-                    <button onclick="calcAppend('.')" class="bg-zinc-800 hover:bg-zinc-700 py-2 rounded font-bold text-base transition cursor-pointer">.</button>
-                </div>
-            </div>
-
-            <!-- 점수 입력 섹션 -->
-            <div class="bg-zinc-800/40 p-4 rounded-xl border border-zinc-700/60 space-y-4">
-                <h2 class="text-sm font-bold text-red-400 flex items-center gap-1.5">
-                    <span>🗝️</span> 탈출 및 점수 정산
-                </h2>
-
-                <!-- 1단계: 생존 유무 체크 -->
-                <div class="bg-zinc-900/70 p-3 rounded-lg border border-zinc-700/50 flex items-center justify-between">
-                    <div>
-                        <span class="text-sm font-bold text-zinc-200 block">탈출 생존 여부</span>
-                        <span class="text-xs text-zinc-400">체크해야만 점수 기록 및 연산이 가능합니다.</span>
-                    </div>
-                    <label class="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" id="survival-check" onchange="toggleSurvival()" class="sr-only peer">
-                        <div class="w-11 h-6 bg-zinc-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
-                    </label>
-                </div>
-
-                <!-- 2단계: 임무완수 토큰 체크 -->
-                <div class="bg-zinc-900/70 p-3 rounded-lg border border-zinc-700/50 flex items-center justify-between">
-                    <div>
-                        <span class="text-sm font-bold text-zinc-200 block">임무 완료 토큰 달성</span>
-                        <span class="text-xs text-zinc-400">조건 만족 시 체크 (+20점 획득)</span>
-                    </div>
-                    <input type="checkbox" id="quest-check" onchange="calculateTotalScore()" disabled class="w-5 h-5 accent-red-600 cursor-not-allowed">
-                </div>
-
-                <!-- 3단계: 세부 점수 입력 항목들 -->
-                <div class="grid grid-cols-2 gap-2.5">
-                    <div>
-                        <label class="block text-xs text-zinc-400 mb-1">유물 점수 (깡점수)</label>
-                        <input type="number" id="artifact-score" value="0" oninput="calculateTotalScore()" disabled class="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-zinc-400 font-bold text-center cursor-not-allowed">
-                    </div>
-                    <div>
-                        <label class="block text-xs text-zinc-400 mb-1">금화 개수 (+1점/개)</label>
-                        <input type="number" id="gold-score" value="0" oninput="calculateTotalScore()" disabled class="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-zinc-400 font-bold text-center cursor-not-allowed">
-                    </div>
-                    <div>
-                        <label class="block text-xs text-zinc-400 mb-1">기타 토큰 점수</label>
-                        <input type="number" id="token-score" value="0" oninput="calculateTotalScore()" disabled class="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-zinc-400 font-bold text-center cursor-not-allowed">
-                    </div>
-                    <div>
-                        <label class="block text-xs text-zinc-400 mb-1">카드 점수 (깡점수)</label>
-                        <input type="number" id="card-score" value="0" oninput="calculateTotalScore()" disabled class="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-zinc-400 font-bold text-center cursor-not-allowed">
-                    </div>
-                </div>
-
-                <div class="flex gap-2 pt-2 border-t border-zinc-700/50">
-                    <button onclick="resetMyScore()" class="w-1/2 bg-zinc-700 hover:bg-zinc-600 font-medium py-2 rounded-lg text-xs transition cursor-pointer text-zinc-300">점수 초기화</button>
-                    <button onclick="leaveRoom()" class="w-1/2 bg-zinc-800 hover:bg-zinc-700 font-medium py-2 rounded-lg text-xs transition cursor-pointer text-zinc-400">던전 나가기</button>
-                </div>
-            </div>
-
-            <!-- 순위 보드 -->
-            <div>
-                <h2 class="text-sm font-bold text-zinc-300 mb-2 flex items-center justify-between">
-                    <span>🏆 카타콤 실시간 순위 (동점시 유물점수 우선)</span>
-                </h2>
-                <div id="leaderboard" class="space-y-2 max-h-40 overflow-y-auto pr-1"></div>
-            </div>
-
-            <!-- 득점 로그 -->
-            <div>
-                <h2 class="text-sm font-bold text-zinc-300 mb-2">📜 탐험 로그</h2>
-                <div id="score-log-list" class="space-y-1 max-h-32 overflow-y-auto pr-1 text-xs text-zinc-400 bg-zinc-950/80 p-2.5 rounded-lg border border-zinc-800">
-                    <p>던전 탐험이 시작되었습니다...</p>
-                </div>
+            <div class="pt-2 border-t border-zinc-700/50">
+                <button onclick="resetScore()" class="w-full bg-zinc-700 hover:bg-zinc-600 font-medium py-2.5 rounded-lg text-xs transition cursor-pointer text-zinc-300">점수 초기화</button>
             </div>
         </div>
 
-        <div class="mt-8 pt-4 border-t border-zinc-800 text-center">
-            <p class="text-xs text-zinc-600">Clank! Catacombs Realtime Scoreboard</p>
+        <div class="mt-4 pt-4 border-t border-zinc-800 text-center">
+            <p class="text-xs text-zinc-600">Clank! Catacombs Offline Score Calculator</p>
         </div>
     </div>
 
     <script>
-        const SUPABASE_URL = 'https://ebgziywanxwxqohxhvam.supabase.co';
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImViZ3ppeXdhbnh3eHFvaHhodmFtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY0Njc2MjQsImV4cCI6MjEwMjA0MzYyNH0.FUGQjkx6Hv801UeeE_Ti7XXlVPRiG1bOIuHTEJXDRBA';
-        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-        let currentRoomCode = null;
-        let myPlayerId = null;
-        let myCurrentScore = 0;
-        let myArtifactScore = 0;
-
         let calcExpression = "0";
 
         function toggleCalculator() {
@@ -237,16 +180,13 @@
             });
 
             if (!isAlive) {
-                myCurrentScore = 0;
-                myArtifactScore = 0;
                 document.getElementById('my-score').innerText = '0점';
-                syncScoreToDatabase(0, 0, '사망 처리 (0점)');
             } else {
                 calculateTotalScore();
             }
         }
 
-        async function calculateTotalScore() {
+        function calculateTotalScore() {
             const isAlive = document.getElementById('survival-check').checked;
             if (!isAlive) return;
 
@@ -257,101 +197,13 @@
             const card = parseInt(document.getElementById('card-score').value) || 0;
             const questBonus = hasQuest ? 20 : 0;
 
-            myArtifactScore = artifact;
-            myCurrentScore = artifact + gold + token + card + questBonus;
-
-            document.getElementById('my-score').innerText = myCurrentScore + '점';
-            
-            const myName = document.getElementById('player-name').value;
-            await syncScoreToDatabase(myCurrentScore, myArtifactScore, `${myName}님 점수 갱신: 총 ${myCurrentScore}점 (유물:${artifact}, 금화:${gold}, 토큰:${token}, 카드:${card}, 임무:${questBonus})`);
+            const totalScore = artifact + gold + token + card + questBonus;
+            document.getElementById('my-score').innerText = totalScore + '점';
         }
 
-        async function syncScoreToDatabase(score, artifact, logMsg) {
-            if (!myPlayerId) return;
-            await supabaseClient.from('players').update({ score: score, artifact_score: artifact }).eq('id', myPlayerId);
-
-            const myName = document.getElementById('player-name').value;
-            supabaseClient.channel('room-channel-' + currentRoomCode).send({
-                type: 'broadcast',
-                event: 'score_log',
-                payload: { name: myName, msg: logMsg }
-            });
-        }
-
-        function generateRoomCode() { return Math.random().toString(36).substring(2, 6).toUpperCase(); }
-
-        async function createRoom() {
-            const name = document.getElementById('player-name').value.trim();
-            if (!name) { alert('모험가 닉네임을 입력해주세요!'); return; }
-            const code = generateRoomCode();
-            await supabaseClient.from('rooms').insert([{ code }]);
-            const { data } = await supabaseClient.from('players').insert([{ room_code: code, name: name, score: 0, artifact_score: 0 }]).select();
-            currentRoomCode = code; myPlayerId = data[0].id; myCurrentScore = 0; enterGameUI();
-        }
-
-        async function joinRoom() {
-            const name = document.getElementById('player-name').value.trim();
-            const code = document.getElementById('room-code-input').value.trim().toUpperCase();
-            if (!name || !code) { alert('닉네임과 던전 코드를 확인해주세요!'); return; }
-            const { data: roomData } = await supabaseClient.from('rooms').select('code').eq('code', code).single();
-            if (!roomData) { alert('존재하지 않는 던전입니다.'); return; }
-            const { data } = await supabaseClient.from('players').insert([{ room_code: code, name: name, score: 0, artifact_score: 0 }]).select();
-            currentRoomCode = code; myPlayerId = data[0].id; myCurrentScore = 0; enterGameUI();
-        }
-
-        function enterGameUI() {
-            document.getElementById('lobby-section').classList.add('hidden');
-            document.getElementById('game-section').classList.remove('hidden');
-            document.getElementById('display-room-code').innerText = currentRoomCode;
-            fetchLeaderboard(); subscribeRealtime();
-        }
-
-        async function resetMyScore() {
+        function resetScore() {
             document.getElementById('survival-check').checked = false;
             toggleSurvival();
-            const myName = document.getElementById('player-name').value;
-            supabaseClient.channel('room-channel-' + currentRoomCode).send({
-                type: 'broadcast',
-                event: 'score_log',
-                payload: { name: myName, msg: `${myName}님이 점수를 초기화했습니다.` }
-            });
-        }
-
-        async function fetchLeaderboard() {
-            const { data } = await supabaseClient.from('players').select('*').eq('room_code', currentRoomCode)
-                .order('score', { ascending: false })
-                .order('artifact_score', { ascending: false });
-            if (data) renderLeaderboard(data);
-        }
-
-        function renderLeaderboard(players) {
-            const container = document.getElementById('leaderboard'); container.innerHTML = '';
-            players.forEach((player, index) => {
-                const isMe = player.id === myPlayerId;
-                const item = document.createElement('div');
-                item.className = `flex justify-between items-center p-3 rounded-lg border ${isMe ? 'bg-red-500/10 border-red-500/50' : 'bg-zinc-800/50 border-zinc-700/50'}`;
-                item.innerHTML = `<div class="flex items-center gap-3"><span class="w-6 text-center text-lg ${index === 0 ? 'text-amber-400 font-bold' : 'text-zinc-400'}">${index + 1}등</span><span class="font-medium text-zinc-200">${player.name} ${isMe ? '(나)' : ''}</span></div><div class="text-right"><span class="font-bold text-lg text-amber-400">${player.score}점</span><span class="text-xs text-zinc-500 block">유물: ${player.artifact_score}</span></div>`;
-                container.appendChild(item);
-            });
-        }
-
-        function subscribeRealtime() {
-            const channel = supabaseClient.channel('room-channel-' + currentRoomCode);
-            channel
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'players', filter: `room_code=eq.${currentRoomCode}` }, () => fetchLeaderboard())
-                .on('broadcast', { event: 'score_log' }, (payload) => {
-                    const logList = document.getElementById('score-log-list');
-                    const newLog = document.createElement('p');
-                    newLog.innerHTML = `● ${payload.payload.msg}`;
-                    logList.prepend(newLog);
-                    if (logList.children.length > 15) logList.lastElementChild.remove();
-                })
-                .subscribe();
-        }
-
-        async function leaveRoom() {
-            if (myPlayerId) await supabaseClient.from('players').delete().eq('id', myPlayerId);
-            location.reload();
         }
     </script>
 </body>
