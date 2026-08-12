@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>클랭크 카타콤: 자동점수계산기</title>
+    <title>클랭크 카타콤: 실시간 자동점수계산기</title>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Nanum+Gothic:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root {
             --bg-color: #0c0908;
@@ -48,7 +49,7 @@
         }
 
         .container {
-            max-width: 100%;
+            max-width: 480px;
             margin: 0 auto;
         }
 
@@ -157,19 +158,6 @@
             border: 1px solid #e74c3c;
         }
 
-        .btn-danger-subtle {
-            background: transparent;
-            border: 1px solid var(--danger);
-            color: var(--danger);
-            padding: 4px 8px;
-            font-size: 0.75rem;
-        }
-
-        .btn-danger-subtle:active {
-            background-color: var(--danger);
-            color: white;
-        }
-
         .players-grid {
             display: flex;
             flex-direction: column;
@@ -185,7 +173,6 @@
             flex-direction: column;
             gap: 10px;
             position: relative;
-            overflow: hidden;
         }
 
         .player-card-header {
@@ -235,52 +222,6 @@
             color: var(--text-muted);
         }
 
-        .death-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(12, 9, 8, 0.92);
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            gap: 12px;
-            z-index: 10;
-            transition: opacity 0.3s ease;
-        }
-
-        .death-overlay.hidden {
-            display: none;
-        }
-
-        .death-title {
-            font-family: 'Cinzel', serif;
-            color: var(--danger);
-            font-size: 1.8rem;
-            font-weight: bold;
-            letter-spacing: 2px;
-            text-shadow: 0 0 10px rgba(192, 57, 43, 0.6);
-            animation: pulseText 1.5s infinite alternate;
-        }
-
-        @keyframes pulseText {
-            from { transform: scale(1); text-shadow: 0 0 5px rgba(192, 57, 43, 0.4); }
-            to { transform: scale(1.05); text-shadow: 0 0 15px rgba(192, 57, 43, 0.8); }
-        }
-
-        .btn-close-death {
-            background: transparent;
-            border: 2px solid var(--danger);
-            color: var(--danger);
-            padding: 6px 16px;
-            border-radius: 4px;
-            font-size: 0.85rem;
-            cursor: pointer;
-            box-shadow: none;
-        }
-
         .leaderboard-table {
             width: 100%;
             border-collapse: collapse;
@@ -306,18 +247,11 @@
             font-weight: bold;
         }
 
-        .tie-note {
-            font-size: 0.65rem;
-            color: var(--accent-gold);
-            display: block;
-            margin-top: 1px;
-        }
-
         .log-container {
             background-color: #0f0b09;
             border: 1px solid var(--panel-border);
             border-radius: 4px;
-            height: 110px;
+            height: 120px;
             overflow-y: auto;
             padding: 8px;
             font-family: monospace;
@@ -333,15 +267,9 @@
             border-left: 3px solid var(--accent-gold);
         }
 
-        .dead-badge {
-            color: var(--danger);
-            font-weight: bold;
-        }
-
-        .alive-badge {
-            color: var(--success);
-            font-weight: bold;
-        }
+        .dead-badge { color: var(--danger); font-weight: bold; }
+        .alive-badge { color: var(--success); font-weight: bold; }
+        .hidden { display: none !important; }
     </style>
 </head>
 <body>
@@ -349,63 +277,117 @@
 <div class="container" id="main-container">
     <header>
         <h1>CLANK! CATACOMBS</h1>
-        <div class="subtitle">자동점수계산기</div>
+        <div class="subtitle">실시간 자동점수계산기</div>
         <div class="creator">제작자 : 천상민</div>
     </header>
 
-    <!-- 점수 기록 섹션 -->
-    <section class="card" id="scoring-section">
-        <div class="card-header-flex">
-            <h2>탐험가 관리</h2>
-            <div class="action-buttons">
-                <button class="btn-dragon" id="btn-dragon-attack">드래곤</button>
-                <button id="btn-add-player">+ 인원추가</button>
+    <!-- 1. 로비 섹션 (방 만들기 및 참여) -->
+    <section class="card" id="lobby-section">
+        <h2 style="margin-bottom: 10px;">참가 설정</h2>
+        <div style="space-y: 10px;">
+            <div style="margin-bottom: 10px;">
+                <label style="display:block; font-size:0.85rem; color:var(--text-muted); margin-bottom:4px;">탐험가 닉네임</label>
+                <input type="text" id="player-name" placeholder="본인 닉네임 입력">
+            </div>
+            
+            <div style="display: flex; gap: 8px; margin-top: 15px;">
+                <button onclick="createRoom()" style="flex: 1; padding: 12px;">방 만들기</button>
+            </div>
+            <div style="display: flex; gap: 8px; margin-top: 10px;">
+                <input type="text" id="room-code-input" placeholder="참가 코드 4자리" style="text-transform: uppercase; text-align: center; font-weight: bold; letter-spacing: 2px;">
+                <button onclick="joinRoom()" style="background: linear-gradient(to bottom, #2980b9, #1f618d); color: #fff; padding: 12px 16px;">참여하기</button>
             </div>
         </div>
-        <div id="players-scoring-container" class="players-grid"></div>
     </section>
 
-    <!-- 실시간 순위표 및 피드 섹션 -->
-    <section class="card" id="dashboard-section">
-        <h2>실시간 순위</h2>
-        <table class="leaderboard-table">
-            <thead>
-                <tr>
-                    <th>순위</th>
-                    <th>이름</th>
-                    <th>상태</th>
-                    <th>유물</th>
-                    <th>총점</th>
-                </tr>
-            </thead>
-            <tbody id="leaderboard-body"></tbody>
-        </table>
-
-        <h2 style="margin-top: 20px; font-size: 1rem;">던전 이벤트 피드</h2>
-        <div class="log-container" id="score-log-feed">
-            <div class="log-item">[시스템] 카타콤 모험이 시작되었습니다.</div>
+    <!-- 2. 게임 및 점수 입력 섹션 -->
+    <div id="game-section" class="hidden">
+        <div class="card" style="background: rgba(61,46,36,0.3); display: flex; justify-content: space-between; align-items: center; padding: 10px 14px;">
+            <div>
+                <span style="font-size: 0.75rem; color: var(--text-muted); display: block;">참가 코드</span>
+                <span id="display-room-code" style="font-size: 1.2rem; font-family: monospace; font-weight: bold; color: var(--accent-gold); letter-spacing: 2px;">----</span>
+            </div>
+            <button onclick="leaveRoom()" style="background: transparent; border: 1px solid var(--danger); color: var(--danger); padding: 6px 10px; font-size: 0.75rem;">나가기</button>
         </div>
-    </section>
+
+        <section class="card">
+            <div class="card-header-flex">
+                <h2>내 점수 입력</h2>
+                <div class="action-buttons">
+                    <button class="btn-dragon" id="btn-dragon-attack">드래곤 소리</button>
+                </div>
+            </div>
+            
+            <div id="my-scoring-card" class="player-card">
+                <div class="player-card-header">
+                    <span id="my-card-title">내 정보</span>
+                    <span id="my-calculated-total" style="color: var(--accent-gold); font-weight: bold;">0점</span>
+                </div>
+
+                <label class="checkbox-group">
+                    <input type="checkbox" id="my-is-alive" onchange="updateMyData()">
+                    <span>지하 깊은 곳에서 탈출 성공 (탈출 실패 시 유물/골드 점수 무효)</span>
+                </label>
+
+                <div class="score-inputs-grid">
+                    <div class="input-group">
+                        <label>유물 점수합계</label>
+                        <input type="number" id="my-artifact" placeholder="0" oninput="updateMyData()">
+                    </div>
+                    <div class="input-group">
+                        <label>골드 (5골드당 1점)</label>
+                        <input type="number" id="my-gold" placeholder="0" oninput="updateMyData()">
+                    </div>
+                    <div class="input-group">
+                        <label>비밀 토큰 점수</label>
+                        <input type="number" id="my-token" placeholder="0" oninput="updateMyData()">
+                    </div>
+                    <div class="input-group">
+                        <label>카드 점수</label>
+                        <input type="number" id="my-card" placeholder="0" oninput="updateMyData()">
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 실시간 순위표 및 피드 섹션 -->
+        <section class="card">
+            <h2>실시간 순위</h2>
+            <table class="leaderboard-table">
+                <thead>
+                    <tr>
+                        <th>순위</th>
+                        <th>이름</th>
+                        <th>상태</th>
+                        <th>유물</th>
+                        <th>총점</th>
+                    </tr>
+                </thead>
+                <tbody id="leaderboard-body"></tbody>
+            </table>
+
+            <h2 style="margin-top: 20px; font-size: 1rem;">던전 이벤트 피드</h2>
+            <div class="log-container" id="score-log-feed">
+                <div class="log-item">[시스템] 카타콤 모험이 시작되었습니다.</div>
+            </div>
+        </section>
+    </div>
 </div>
 
 <script>
-    let sessionData = {
-        players: []
-    };
+    const SUPABASE_URL = 'https://ebgziywanxwxqohxhvam.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImViZ3ppeXdhbnh3eHFvaHhodmFtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY0Njc2MjQsImV4cCI6MjEwMjA0MzYyNH0.FUGQjkx6Hv801UeeE_Ti7XXlVPRiG1bOIuHTEJXDRBA';
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    const playersScoringContainer = document.getElementById('players-scoring-container');
-    const btnAddPlayer = document.getElementById('btn-add-player');
-    const btnDragonAttack = document.getElementById('btn-dragon-attack');
-    const mainContainer = document.getElementById('main-container');
-    const leaderboardBody = document.getElementById('leaderboard-body');
-    const scoreLogFeed = document.getElementById('score-log-feed');
+    let currentRoomCode = null;
+    let myPlayerId = null;
 
+    // 드래곤 공격 사운드 및 효과
     function playDragonSound() {
         try {
             const AudioContext = window.AudioContext || window.webkitAudioContext;
             if (!AudioContext) return;
             const ctx = new AudioContext();
-
             const osc = ctx.createOscillator();
             const gainNode = ctx.createGain();
 
@@ -426,271 +408,168 @@
         }
     }
 
-    btnDragonAttack.addEventListener('click', () => {
+    document.getElementById('btn-dragon-attack').addEventListener('click', () => {
         playDragonSound();
+        const mainContainer = document.getElementById('main-container');
         mainContainer.classList.remove('shake-effect');
         void mainContainer.offsetWidth;
         mainContainer.classList.add('shake-effect');
-        addLog(`[경고] 드래곤 습격 발생! 🔥`);
+
+        // 브로드캐스트로 모든 참여자에게 드래곤 습격 전송
+        supabaseClient.channel('room-channel-' + currentRoomCode).send({
+            type: 'broadcast',
+            event: 'dragon_attack',
+            payload: { name: document.getElementById('player-name').value }
+        });
     });
 
-    function initDefaultPlayers() {
-        sessionData.players = [
-            { id: 0, name: "모험가 1", isAlive: true, mission: false, artifact: '', gold: '', token: '', card: '', totalScore: 0 }
-        ];
-        renderScoringCards();
-        updateLeaderboard();
+    function generateRoomCode() { 
+        return Math.random().toString(36).substring(2, 6).toUpperCase(); 
     }
 
-    btnAddPlayer.addEventListener('click', () => {
-        const newId = sessionData.players.length > 0 ? Math.max(...sessionData.players.map(p => p.id)) + 1 : 0;
-        const newName = `모험가 ${sessionData.players.length + 1}`;
+    async function createRoom() {
+        const name = document.getElementById('player-name').value.trim();
+        if (!name) { alert('닉네임을 입력해주세요!'); return; }
+        const code = generateRoomCode();
         
-        sessionData.players.push({
-            id: newId,
-            name: newName,
-            isAlive: true,
-            mission: false,
-            artifact: '',
-            gold: '',
-            token: '',
-            card: '',
-            totalScore: 0
-        });
+        await supabaseClient.from('rooms').insert([{ code }]);
+        const { data, error } = await supabaseClient.from('players').insert([{ 
+            room_code: code, 
+            name: name, 
+            score: 0,
+            is_alive: true,
+            artifact: 0,
+            gold: 0,
+            token: 0,
+            card_score: 0
+        }]).select();
 
-        renderScoringCards();
-        updateLeaderboard();
-        addLog(`[시스템] '${newName}' 합류.`);
-    });
+        if (error) { alert('방 생성 실패'); return; }
 
-    window.removePlayer = function(id) {
-        const target = sessionData.players.find(p => p.id === id);
-        if (target) {
-            sessionData.players = sessionData.players.filter(p => p.id !== id);
-            renderScoringCards();
-            updateLeaderboard();
-            addLog(`[시스템] '${target.name}' 제외.`);
-        }
-    };
+        currentRoomCode = code; 
+        myPlayerId = data[0].id; 
+        enterGameUI();
+    }
 
-    function renderScoringCards() {
-        playersScoringContainer.innerHTML = '';
+    async function joinRoom() {
+        const name = document.getElementById('player-name').value.trim();
+        const code = document.getElementById('room-code-input').value.trim().toUpperCase();
+        if (!name || !code) { alert('닉네임과 코드를 확인해주세요!'); return; }
         
-        if (sessionData.players.length === 0) {
-            playersScoringContainer.innerHTML = `<div style="text-align: center; color: var(--text-muted); padding: 15px; font-size: 0.85rem;">등록된 탐험가가 없습니다. 우측 상단의 '+ 인원추가' 버튼을 눌러주세요.</div>`;
-            return;
-        }
-
-        sessionData.players.forEach(p => {
-            const cardDiv = document.createElement('div');
-            cardDiv.className = 'player-card';
-            cardDiv.innerHTML = `
-                <div class="death-overlay ${p.isAlive ? 'hidden' : ''}" data-overlay-id="${p.id}">
-                    <div class="death-title">사망</div>
-                    <button class="btn-close-death" data-id="${p.id}">✕ 닫기</button>
-                </div>
-
-                <div class="player-card-header">
-                    <input type="text" class="p-name-input" data-id="${p.id}" value="${p.name}" style="background:transparent; border:none; color:var(--accent-gold); font-family:'Cinzel', serif; font-size:1rem; width:120px;" placeholder="이름 입력">
-                    <button class="btn-danger-subtle" onclick="removePlayer(${p.id})">삭제</button>
-                </div>
-                <label class="checkbox-group">
-                    <input type="checkbox" class="input-is-alive" data-id="${p.id}" ${p.isAlive ? 'checked' : ''}>
-                    <span>생존 탈출 여부 (사망시 체크풀기)</span>
-                </label>
-                <label class="checkbox-group">
-                    <input type="checkbox" class="input-mission" data-id="${p.id}" ${p.mission ? 'checked' : ''} ${!p.isAlive ? 'disabled' : ''}>
-                    <span>임무 완수 (+20점)</span>
-                </label>
-                <div class="score-inputs-grid">
-                    <div class="input-group">
-                        <label>유물 점수</label>
-                        <input type="number" class="input-artifact" data-id="${p.id}" value="${p.artifact}" min="0" placeholder="" ${!p.isAlive ? 'disabled' : ''}>
-                    </div>
-                    <div class="input-group">
-                        <label>금화 (+1점)</label>
-                        <input type="number" class="input-gold" data-id="${p.id}" value="${p.gold}" min="0" placeholder="" ${!p.isAlive ? 'disabled' : ''}>
-                    </div>
-                    <div class="input-group">
-                        <label>토큰 점수</label>
-                        <input type="number" class="input-token" data-id="${p.id}" value="${p.token}" min="0" placeholder="" ${!p.isAlive ? 'disabled' : ''}>
-                    </div>
-                    <div class="input-group">
-                        <label>카드 점수</label>
-                        <input type="number" class="input-card" data-id="${p.id}" value="${p.card}" min="0" placeholder="" ${!p.isAlive ? 'disabled' : ''}>
-                    </div>
-                </div>
-            `;
-            playersScoringContainer.appendChild(cardDiv);
-        });
-
-        attachLiveEventListeners();
-    }
-
-    function attachLiveEventListeners() {
-        document.querySelectorAll('.p-name-input').forEach(input => {
-            input.addEventListener('input', (e) => {
-                const id = parseInt(e.target.dataset.id);
-                const player = sessionData.players.find(p => p.id === id);
-                if (player) {
-                    player.name = e.target.value.trim() || `모험가`;
-                    updateLeaderboard();
-                }
-            });
-        });
-
-        document.querySelectorAll('.input-is-alive').forEach(chk => {
-            chk.addEventListener('change', (e) => {
-                const id = parseInt(e.target.dataset.id);
-                const card = e.target.closest('.player-card');
-                const overlay = card.querySelector('.death-overlay');
-                const inputs = card.querySelectorAll('input:not(.input-is-alive):not(.p-name-input)');
-                
-                if (!e.target.checked) {
-                    overlay.classList.remove('hidden');
-                    inputs.forEach(input => {
-                        input.disabled = true;
-                        if (input.type === 'checkbox') input.checked = false;
-                        else input.value = '';
-                    });
-                } else {
-                    overlay.classList.add('hidden');
-                    inputs.forEach(input => input.disabled = false);
-                }
-                recalculateAndNotify();
-            });
-        });
-
-        document.querySelectorAll('.input-mission').forEach(chk => {
-            chk.addEventListener('change', recalculateAndNotify);
-        });
-
-        document.querySelectorAll('.btn-close-death').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const card = e.target.closest('.player-card');
-                const overlay = card.querySelector('.death-overlay');
-                overlay.classList.add('hidden');
-            });
-        });
-
-        playersScoringContainer.querySelectorAll('input').forEach(input => {
-            if (!input.classList.contains('input-is-alive') && !input.classList.contains('p-name-input')) {
-                input.addEventListener('input', recalculateAndNotify);
-                input.addEventListener('change', recalculateAndNotify);
-            }
-        });
-    }
-
-    function recalculateAndNotify() {
-        sessionData.players.forEach(p => {
-            const card = playersScoringContainer.querySelector(`[data-id="${p.id}"].input-is-alive`)?.closest('.player-card');
-            if (!card) return;
-            
-            const isAlive = card.querySelector('.input-is-alive').checked;
-            p.isAlive = isAlive;
-
-            if (!isAlive) {
-                p.mission = false;
-                p.artifact = '';
-                p.gold = '';
-                p.token = '';
-                p.card = '';
-                p.totalScore = 0;
-            } else {
-                p.mission = card.querySelector('.input-mission').checked;
-                
-                const artVal = card.querySelector('.input-artifact').value;
-                const goldVal = card.querySelector('.input-gold').value;
-                const tokenVal = card.querySelector('.input-token').value;
-                const cardVal = card.querySelector('.input-card').value;
-
-                p.artifact = artVal === '' ? '' : parseInt(artVal);
-                p.gold = goldVal === '' ? '' : parseInt(goldVal);
-                p.token = tokenVal === '' ? '' : parseInt(tokenVal);
-                p.card = cardVal === '' ? '' : parseInt(cardVal);
-
-                const missionScore = p.mission ? 20 : 0;
-                const artScore = p.artifact === '' ? 0 : p.artifact;
-                const goldScore = p.gold === '' ? 0 : p.gold;
-                const tokenScore = p.token === '' ? 0 : p.token;
-                const cardScore = p.card === '' ? 0 : p.card;
-
-                p.totalScore = missionScore + artScore + goldScore + tokenScore + cardScore;
-            }
-        });
-
-        updateLeaderboard();
-    }
-
-    function updateLeaderboard() {
-        const sortedPlayers = [...sessionData.players].sort((a, b) => {
-            if (b.totalScore !== a.totalScore) {
-                return b.totalScore - a.totalScore;
-            }
-            const artA = a.artifact === '' ? 0 : a.artifact;
-            const artB = b.artifact === '' ? 0 : b.artifact;
-            return artB - artA;
-        });
-
-        leaderboardBody.innerHTML = '';
+        const { data: roomData } = await supabaseClient.from('rooms').select('code').eq('code', code).single();
+        if (!roomData) { alert('존재하지 않는 방입니다.'); return; }
         
-        if (sortedPlayers.length === 0) {
-            leaderboardBody.innerHTML = `<tr><td colspan="5" style="color: var(--text-muted);">순위 데이터가 없습니다.</td></tr>`;
-            return;
-        }
+        const { data, error } = await supabaseClient.from('players').insert([{ 
+            room_code: code, 
+            name: name, 
+            score: 0,
+            is_alive: true,
+            artifact: 0,
+            gold: 0,
+            token: 0,
+            card_score: 0
+        }]).select();
 
-        sortedPlayers.forEach((p, index) => {
+        if (error) { alert('참가 실패'); return; }
+
+        currentRoomCode = code; 
+        myPlayerId = data[0].id; 
+        enterGameUI();
+    }
+
+    function enterGameUI() {
+        document.getElementById('lobby-section').classList.add('hidden');
+        document.getElementById('game-section').classList.remove('hidden');
+        document.getElementById('display-room-code').innerText = currentRoomCode;
+        document.getElementById('my-card-title').innerText = document.getElementById('player-name').value + ' (나)';
+        
+        fetchLeaderboard();
+        subscribeRealtime();
+    }
+
+    // 내 점수 변경 시 실시간 계산 및 DB 업데이트
+    async function updateMyData() {
+        const isAlive = document.getElementById('my-is-alive').checked;
+        const artifact = parseInt(document.getElementById('my-artifact').value) || 0;
+        const goldInput = parseInt(document.getElementById('my-gold').value) || 0;
+        const token = parseInt(document.getElementById('my-token').value) || 0;
+        const card = parseInt(document.getElementById('my-card').value) || 0;
+
+        // 클랭크 규칙: 탈출 실패 시 유물(artifact)과 골드(gold) 점수는 0점 처리
+        const effectiveArtifact = isAlive ? artifact : 0;
+        const effectiveGold = isAlive ? Math.floor(goldInput / 5) : 0;
+        const totalScore = effectiveArtifact + effectiveGold + token + card;
+
+        document.getElementById('my-calculated-total').innerText = totalScore + '점';
+
+        await supabaseClient.from('players').update({ 
+            score: totalScore,
+            is_alive: isAlive,
+            artifact: artifact,
+            gold: goldInput,
+            token: token,
+            card_score: card
+        }).eq('id', myPlayerId);
+    }
+
+    async function fetchLeaderboard() {
+        const { data } = await supabaseClient.from('players').select('*').eq('room_code', currentRoomCode).order('score', { ascending: false });
+        if (data) renderLeaderboard(data);
+    }
+
+    function renderLeaderboard(players) {
+        const tbody = document.getElementById('leaderboard-body');
+        tbody.innerHTML = '';
+        
+        players.forEach((player, index) => {
+            const isMe = player.id === myPlayerId;
             const tr = document.createElement('tr');
-            if (index === 0) tr.classList.add('rank-1');
-
-            let rankText = `${index + 1}위`;
-
-            if (index > 0 && sortedPlayers[index].totalScore === sortedPlayers[index - 1].totalScore) {
-                const artCurr = p.artifact === '' ? 0 : p.artifact;
-                const artPrev = sortedPlayers[index - 1].artifact === '' ? 0 : sortedPlayers[index - 1].artifact;
-                if (artCurr === artPrev) {
-                    rankText = `${index}위(동점)`;
-                } else {
-                    rankText = `${index + 1}위`;
-                }
-            }
-
-            const aliveBadge = p.isAlive 
-                ? `<span class="alive-badge">생존</span>` 
-                : `<span class="dead-badge">사망(0점)</span>`;
-
-            const artDisplayNum = p.artifact === '' ? 0 : p.artifact;
-            let artifactDisplay = `${artDisplayNum}점`;
-            if (index > 0 && p.totalScore === sortedPlayers[index - 1].totalScore) {
-                const artCurr = p.artifact === '' ? 0 : p.artifact;
-                const artPrev = sortedPlayers[index - 1].artifact === '' ? 0 : sortedPlayers[index - 1].artifact;
-                if (artCurr > artPrev) {
-                    artifactDisplay += `<span class="tie-note">✨유물 승리</span>`;
-                } else if (artCurr < artPrev) {
-                    artifactDisplay += `<span class="tie-note" style="color:var(--text-muted);">유물 열세</span>`;
-                }
-            }
-
+            if (isMe) tr.style.background = 'rgba(212, 175, 55, 0.08)';
+            
             tr.innerHTML = `
-                <td>${rankText}</td>
-                <td>${p.name}</td>
-                <td>${aliveBadge}</td>
-                <td>${artifactDisplay}</td>
-                <td><strong>${p.totalScore}점</strong></td>
+                <td class="${index === 0 ? 'rank-1' : ''}">${index + 1}위</td>
+                <td>${player.name} ${isMe ? '(나)' : ''}</td>
+                <td>${player.is_alive ? '<span class="alive-badge">탈출성공</span>' : '<span class="dead-badge">미탈출</span>'}</td>
+                <td>${player.artifact || 0}</td>
+                <td style="font-weight: bold; color: var(--accent-gold);">${player.score}점</td>
             `;
-            leaderboardBody.appendChild(tr);
+            tbody.appendChild(tr);
         });
     }
 
-    function addLog(message) {
+    function subscribeRealtime() {
+        const channel = supabaseClient.channel('room-channel-' + currentRoomCode);
+        channel
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'players', filter: `room_code=eq.${currentRoomCode}` }, () => {
+                fetchLeaderboard();
+            })
+            .on('broadcast', { event: 'dragon_attack' }, (payload) => {
+                playDragonSound();
+                const mainContainer = document.getElementById('main-container');
+                mainContainer.classList.remove('shake-effect');
+                void mainContainer.offsetWidth;
+                mainContainer.classList.add('shake-effect');
+                
+                addLog(`[경고] ${payload.payload.name}님이 드래곤을 자극했습니다! 🔥`);
+            })
+            .subscribe();
+    }
+
+    function addLog(text) {
+        const logFeed = document.getElementById('score-log-feed');
         const div = document.createElement('div');
         div.className = 'log-item';
-        div.textContent = `${new Date().toLocaleTimeString()} - ${message}`;
-        scoreLogFeed.prepend(div);
+        div.innerText = text;
+        logFeed.prepend(div);
+        if (logFeed.children.length > 20) logFeed.lastElementChild.remove();
     }
 
-    initDefaultPlayers();
+    async function leaveRoom() {
+        if (myPlayerId) {
+            await supabaseClient.from('players').delete().eq('id', myPlayerId);
+        }
+        location.reload();
+    }
 </script>
-
 </body>
 </html>
