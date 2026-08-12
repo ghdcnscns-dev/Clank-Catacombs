@@ -282,11 +282,17 @@
             box-shadow: none;
         }
 
+        .table-responsive {
+            width: 100%;
+            overflow-x: auto;
+        }
+
         .leaderboard-table {
             width: 100%;
             border-collapse: collapse;
             margin-top: 5px;
-            font-size: 0.85rem;
+            font-size: 0.8rem;
+            white-space: nowrap;
         }
 
         .leaderboard-table th, .leaderboard-table td {
@@ -299,7 +305,7 @@
             background-color: #231914;
             color: var(--accent-gold);
             font-family: 'Cinzel', serif;
-            font-size: 0.8rem;
+            font-size: 0.75rem;
         }
 
         .rank-1 {
@@ -308,7 +314,7 @@
         }
 
         .tie-note {
-            font-size: 0.65rem;
+            font-size: 0.6rem;
             color: var(--accent-gold);
             display: block;
             margin-top: 1px;
@@ -395,18 +401,23 @@
 
         <section class="card" id="dashboard-section">
             <h2>실시간 순위</h2>
-            <table class="leaderboard-table">
-                <thead>
-                    <tr>
-                        <th>순위</th>
-                        <th>이름</th>
-                        <th>상태</th>
-                        <th>유물</th>
-                        <th>총점</th>
-                    </tr>
-                </thead>
-                <tbody id="leaderboard-body"></tbody>
-            </table>
+            <div class="table-responsive">
+                <table class="leaderboard-table">
+                    <thead>
+                        <tr>
+                            <th>순위</th>
+                            <th>이름</th>
+                            <th>상태</th>
+                            <th>유물</th>
+                            <th>금화</th>
+                            <th>토큰</th>
+                            <th>카드</th>
+                            <th>총점</th>
+                        </tr>
+                    </thead>
+                    <tbody id="leaderboard-body"></tbody>
+                </table>
+            </div>
 
             <h2 style="margin-top: 20px; font-size: 1rem;">던전 이벤트 피드</h2>
             <div class="log-container" id="score-log-feed">
@@ -771,7 +782,7 @@
         leaderboardBody.innerHTML = '';
         
         if (sortedPlayers.length === 0) {
-            leaderboardBody.innerHTML = `<tr><td colspan="5" style="color: var(--text-muted);">순위 데이터가 없습니다.</td></tr>`;
+            leaderboardBody.innerHTML = `<tr><td colspan="8" style="color: var(--text-muted);">순위 데이터가 없습니다.</td></tr>`;
             return;
         }
 
@@ -827,11 +838,18 @@
                 }
             }
 
+            const goldDisplayNum = p.gold === '' ? 0 : p.gold;
+            const tokenDisplayNum = p.token === '' ? 0 : p.token;
+            const cardDisplayNum = p.card === '' ? 0 : p.card;
+
             tr.innerHTML = `
                 <td>${rankText}</td>
                 <td>${p.name} ${p.id === myPlayerId ? '(나)' : ''}</td>
                 <td>${aliveBadge}</td>
                 <td>${artifactDisplay}</td>
+                <td>${goldDisplayNum}점</td>
+                <td>${tokenDisplayNum}점</td>
+                <td>${cardDisplayNum}점</td>
                 <td><strong>${p.totalScore}점</strong></td>
             `;
             leaderboardBody.appendChild(tr);
