@@ -467,7 +467,6 @@
 
         const initialLogs = [`[시스템] '${myName}'님이 방을 생성하고 카타콤 모험에 참가했습니다.`];
 
-        // 방 코드 중복 체크 후 생성
         const { data: existingRoom } = await db.from('clank_rooms').select('room_code').eq('room_code', code).maybeSingle();
         if (existingRoom) {
             alert('방 생성 번호가 겹쳤습니다. 다시 시도해 주세요.');
@@ -486,7 +485,7 @@
         enterRoom(code, { players: initialPlayers, logs: initialLogs });
     });
 
-    // 방 입장 버튼 (공백 제거 및 정확한 경로 검색 보완)
+    // 방 입장 버튼
     btnJoinRoom.addEventListener('click', async () => {
         const code = inputRoomCode.value.trim();
         const myName = inputMyName.value.trim();
@@ -503,7 +502,6 @@
             return;
         }
 
-        // Supabase에서 정확한 방 코드 검색
         const { data, error } = await db.from('clank_rooms').select('*').eq('room_code', code).maybeSingle();
 
         if (error) {
@@ -522,7 +520,6 @@
             roomData = { players: [], logs: [] };
         }
 
-        // 중복 닉네임 체크
         const isDuplicate = roomData.players.some(p => p.name.trim().toLowerCase() === myName.toLowerCase());
         if (isDuplicate) {
             alert(`⚠️ [경고] 이미 방에 존재하는 닉네임("${myName}")입니다. 다른 닉네임을 사용해주세요!`);
@@ -794,7 +791,8 @@
             return artB - artA;
         });
 
-        leaderboardBody.innerHTML = {};
+        // 오류 수정: innerHTML 초기화 구문을 빈 문자열로 수정
+        leaderboardBody.innerHTML = '';
         
         if (sortedPlayers.length === 0) {
             leaderboardBody.innerHTML = `<tr><td colspan="5" style="color: var(--text-muted);">순위 데이터가 없습니다.</td></tr>`;
