@@ -391,6 +391,7 @@
         <section class="card" id="scoring-section">
             <div class="card-header-flex">
                 <h2>내 탐험 기록 관리</h2>
+                <button id="btn-submit-score" style="padding: 8px 16px; background: linear-gradient(to bottom, #27ae60, #1e8449); color: white;">💾 점수 등록하기</button>
             </div>
             <div id="players-scoring-container" class="players-grid"></div>
         </section>
@@ -431,7 +432,7 @@
     let myPlayerId = null;
     let syncInterval = null;
     let sessionData = { players: [], logs: [] };
-    let lastReportedTieWinner = null; // 중복 로그 방지용 변수
+    let lastReportedTieWinner = null;
 
     const roomLobbySection = document.getElementById('room-lobby-section');
     const gameContentArea = document.getElementById('game-content-area');
@@ -441,17 +442,16 @@
     const btnCreateRoom = document.getElementById('btn-create-room');
     const btnJoinRoom = document.getElementById('btn-join-room');
     const btnLeaveRoom = document.getElementById('btn-leave-room');
+    const btnSubmitScore = document.getElementById('btn-submit-score');
 
     const playersScoringContainer = document.getElementById('players-scoring-container');
     const leaderboardBody = document.getElementById('leaderboard-body');
     const scoreLogFeed = document.getElementById('score-log-feed');
 
-    // 랜덤 4자리 방 코드 생성
     function generateRoomCode() {
         return Math.floor(1000 + Math.random() * 9000).toString();
     }
 
-    // 방 생성 버튼
     btnCreateRoom.addEventListener('click', async () => {
         const myName = inputMyName.value.trim();
         if (!myName) {
@@ -486,7 +486,6 @@
         enterRoom(code, { players: initialPlayers, logs: initialLogs });
     });
 
-    // 방 입장 버튼
     btnJoinRoom.addEventListener('click', async () => {
         const code = inputRoomCode.value.trim();
         const myName = inputMyName.value.trim();
@@ -511,7 +510,7 @@
         }
 
         if (!data) {
-            alert(`⚠️ [입장 불가] '${code}' 방을 찾을 수 없습니다.\n- 방 번호가 올바른지 확인해주세요.\n- 모든 사용자가 동일한 GitHub Pages 주소로 접속했는지 확인해주세요.`);
+            alert(`⚠️ [입장 불가] '${code}' 방을 찾을 수 없습니다.\n- 방 번호가 올바른지 확인해주세요.`);
             inputRoomCode.focus();
             return;
         }
@@ -554,7 +553,6 @@
         enterRoom(code, roomData);
     });
 
-    // 방 나가기 버튼
     btnLeaveRoom.addEventListener('click', () => {
         if (syncInterval) clearInterval(syncInterval);
         currentRoomCode = null;
@@ -571,24 +569,23 @@
         roomLobbySection.classList.add('hidden');
         gameContentArea.style.display = 'block';
 
-        renderScoringCards();
+        renderScoringCard();
         updateLeaderboard();
         renderLogs();
 
         if (syncInterval) clearInterval(syncInterval);
-        syncInterval = setInterval(fetchRoomData, 2000);
+        syncInterval = setInterval(fetchRoomData, 3000);
     }
 
     async function fetchRoomData() {
         if (!currentRoomCode) return;
-        const { data, error } = await db.from('clank_rooms').select('data').eq('room_code', currentRoomCode).maybeSingle();
+        const { data } = await db.from('clank_rooms').select('data').eq('room_code', currentRoomCode).maybeSingle();
         if (data && data.data) {
             const activeEl = document.activeElement;
-            const isTyping = activeEl && (activeEl.tagName === 'INPUT' && !activeEl.classList.contains('input-is-alive'));
+            const isTyping = activeEl && activeEl.tagName === 'INPUT';
             
             if (!isTyping) {
                 sessionData = data.data;
-                renderScoringCards();
                 updateLeaderboard();
                 renderLogs();
             }
@@ -600,11 +597,10 @@
         await db.from('clank_rooms').update({ data: sessionData }).eq('room_code', currentRoomCode);
     }
 
-    function renderScoringCards() {
+    function renderScoringCard() {
         playersScoringContainer.innerHTML = '';
         
         const myPlayer = sessionData.players.find(p => p.id === myPlayerId);
-        
         if (!myPlayer) {
             playersScoringContainer.innerHTML = `<div style="text-align: center; color: var(--text-muted); padding: 15px; font-size: 0.85rem;">플레이어 정보를 찾을 수 없습니다.</div>`;
             return;
@@ -652,135 +648,100 @@
         `;
         playersScoringContainer.appendChild(cardDiv);
 
-        attachLiveEventListeners();
+        attachLocalEventListeners();
     }
 
-    function attachLiveEventListeners() {
-        document.querySelectorAll('.p-name-input').forEach(input => {
-            input.addEventListener('input', (e) => {
-                const id = parseInt(e.target.dataset.id);
-                const player = sessionData.players.find(p => p.id === id);
-                if (player) {
-                    player.name = e.target.value.trim() || `모험가`;
-                    updateLeaderboard();
-                    saveRoomData();
-                }
-            });
-        });
+    function attachLocalEventListeners() {
+        const card = playersScoringContainer.querySelector('.player-card');
+        if (!card) return;
 
-        document.querySelectorAll('.input-is-alive').forEach(chk => {
-            chk.addEventListener('change', (e) => {
-                const id = parseInt(e.target.dataset.id);
-                const player = sessionData.players.find(p => p.id === id);
-                const card = e.target.closest('.player-card');
-                const overlay = card.querySelector('.death-overlay');
-                const inputs = card.querySelectorAll('input:not(.input-is-alive):not(.p-name-input)');
-                
-                if (!e.target.checked) {
-                    if (player) player.overlayDismissed = false;
-                    overlay.classList.remove('hidden');
-                    inputs.forEach(input => {
-                        input.disabled = true;
-                        if (input.type === 'checkbox') input.checked = false;
-                        else input.value = '';
-                    });
-                    if (player) {
-                        addLog(`[사망] '${player.name}'님이 던전 속에서 사망했습니다... (0점 처리)`);
-                    }
-                } else {
-                    if (player) player.overlayDismissed = true;
-                    overlay.classList.add('hidden');
-                    inputs.forEach(input => input.disabled = false);
-                    if (player) {
-                        addLog(`[부활] '${player.name}'님의 생존 상태가 복구되었습니다.`);
-                    }
-                }
-                recalculateAndNotify();
-            });
-        });
+        const isAliveCheckbox = card.querySelector('.input-is-alive');
+        const overlay = card.querySelector('.death-overlay');
+        const inputs = card.querySelectorAll('input:not(.input-is-alive):not(.p-name-input)');
 
-        document.querySelectorAll('.btn-close-death').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const id = parseInt(e.target.dataset.id);
-                const player = sessionData.players.find(p => p.id === id);
-                if (player) {
-                    player.overlayDismissed = true;
-                }
-                const card = e.target.closest('.player-card');
-                const overlay = card.querySelector('.death-overlay');
-                overlay.classList.add('hidden');
-            });
-        });
+        isAliveCheckbox.addEventListener('change', (e) => {
+            const player = sessionData.players.find(p => p.id === myPlayerId);
+            if (!player) return;
 
-        document.querySelectorAll('.input-mission').forEach(chk => {
-            chk.addEventListener('change', (e) => {
-                const id = parseInt(e.target.dataset.id);
-                const player = sessionData.players.find(p => p.id === id);
-                if (player) {
-                    const statusText = e.target.checked ? '임무 완수 (+20점)' : '임무 완수 취소';
-                    addLog(`[점수] '${player.name}'님이 ${statusText}했습니다.`);
-                }
-                recalculateAndNotify();
-            });
-        });
-
-        playersScoringContainer.querySelectorAll('input[type="number"]').forEach(input => {
-            input.addEventListener('change', (e) => {
-                const id = parseInt(e.target.dataset.id);
-                const player = sessionData.players.find(p => p.id === id);
-                if (player) {
-                    const labelName = e.target.closest('.input-group').querySelector('label').textContent;
-                    const val = e.target.value === '' ? '0' : e.target.value;
-                    addLog(`[점수] '${player.name}'님의 ${labelName}이(가) ${val}점으로 등록/변경되었습니다.`);
-                }
-                recalculateAndNotify();
-            });
-        });
-    }
-
-    function recalculateAndNotify() {
-        sessionData.players.forEach(p => {
-            if (p.id !== myPlayerId) return;
-            
-            const card = playersScoringContainer.querySelector(`[data-id="${p.id}"].input-is-alive`)?.closest('.player-card');
-            if (!card) return;
-            
-            const isAlive = card.querySelector('.input-is-alive').checked;
-            p.isAlive = isAlive;
-
-            if (!isAlive) {
-                p.mission = false;
-                p.artifact = '';
-                p.gold = '';
-                p.token = '';
-                p.card = '';
-                p.totalScore = 0;
+            if (!e.target.checked) {
+                player.overlayDismissed = false;
+                overlay.classList.remove('hidden');
+                inputs.forEach(input => {
+                    input.disabled = true;
+                    if (input.type === 'checkbox') input.checked = false;
+                    else input.value = '';
+                });
             } else {
-                p.mission = card.querySelector('.input-mission').checked;
-                
-                const artVal = card.querySelector('.input-artifact').value;
-                const goldVal = card.querySelector('.input-gold').value;
-                const tokenVal = card.querySelector('.input-token').value;
-                const cardVal = card.querySelector('.input-card').value;
-
-                p.artifact = artVal === '' ? '' : parseInt(artVal);
-                p.gold = goldVal === '' ? '' : parseInt(goldVal);
-                p.token = tokenVal === '' ? '' : parseInt(tokenVal);
-                p.card = cardVal === '' ? '' : parseInt(cardVal);
-
-                const missionScore = p.mission ? 20 : 0;
-                const artScore = p.artifact === '' ? 0 : p.artifact;
-                const goldScore = p.gold === '' ? 0 : p.gold;
-                const tokenScore = p.token === '' ? 0 : p.token;
-                const cardScore = p.card === '' ? 0 : p.card;
-
-                p.totalScore = missionScore + artScore + goldScore + tokenScore + cardScore;
+                player.overlayDismissed = true;
+                overlay.classList.add('hidden');
+                inputs.forEach(input => input.disabled = false);
             }
         });
 
-        updateLeaderboard();
-        saveRoomData();
+        card.querySelector('.btn-close-death').addEventListener('click', () => {
+            const player = sessionData.players.find(p => p.id === myPlayerId);
+            if (player) player.overlayDismissed = true;
+            overlay.classList.add('hidden');
+        });
     }
+
+    btnSubmitScore.addEventListener('click', async () => {
+        const myPlayer = sessionData.players.find(p => p.id === myPlayerId);
+        if (!myPlayer) return;
+
+        const card = playersScoringContainer.querySelector('.player-card');
+        if (!card) return;
+
+        myPlayer.name = card.querySelector('.p-name-input').value.trim() || `모험가`;
+        myPlayer.isAlive = card.querySelector('.input-is-alive').checked;
+
+        if (!myPlayer.isAlive) {
+            myPlayer.mission = false;
+            myPlayer.artifact = '';
+            myPlayer.gold = '';
+            myPlayer.token = '';
+            myPlayer.card = '';
+            myPlayer.totalScore = 0;
+            addLog(`[사망] '${myPlayer.name}'님이 던전 속에서 사망했습니다... (0점 처리)`);
+        } else {
+            myPlayer.mission = card.querySelector('.input-mission').checked;
+            
+            const artVal = card.querySelector('.input-artifact').value;
+            const goldVal = card.querySelector('.input-gold').value;
+            const tokenVal = card.querySelector('.input-token').value;
+            const cardVal = card.querySelector('.input-card').value;
+
+            myPlayer.artifact = artVal === '' ? '' : parseInt(artVal);
+            myPlayer.gold = goldVal === '' ? '' : parseInt(goldVal);
+            myPlayer.token = tokenVal === '' ? '' : parseInt(tokenVal);
+            myPlayer.card = cardVal === '' ? '' : parseInt(cardVal);
+
+            const missionScore = myPlayer.mission ? 20 : 0;
+            const artScore = myPlayer.artifact === '' ? 0 : myPlayer.artifact;
+            const goldScore = myPlayer.gold === '' ? 0 : myPlayer.gold;
+            const tokenScore = myPlayer.token === '' ? 0 : myPlayer.token;
+            const cardScore = myPlayer.card === '' ? 0 : myPlayer.card;
+
+            myPlayer.totalScore = missionScore + artScore + goldScore + tokenScore + cardScore;
+            addLog(`[점수] '${myPlayer.name}'님의 탐험 기록이 등록되었습니다. (총점: ${myPlayer.totalScore}점)`);
+        }
+
+        const { data } = await db.from('clank_rooms').select('data').eq('room_code', currentRoomCode).maybeSingle();
+        if (data && data.data) {
+            sessionData = data.data;
+            const idx = sessionData.players.findIndex(p => p.id === myPlayerId);
+            if (idx !== -1) {
+                sessionData.players[idx] = myPlayer;
+            } else {
+                sessionData.players.push(myPlayer);
+            }
+        }
+
+        await saveRoomData();
+        updateLeaderboard();
+        renderLogs();
+        alert('✨ 탐험 기록이 성공적으로 등록되었습니다!');
+    });
 
     function updateLeaderboard() {
         const sortedPlayers = [...sessionData.players].sort((a, b) => {
@@ -799,12 +760,10 @@
             return;
         }
 
-        // 동점 상황에서 유물 점수로 1위가 갈린 경우 이벤트 피드 알림 체크
         if (sortedPlayers.length >= 2) {
             const first = sortedPlayers[0];
             const second = sortedPlayers[1];
 
-            // 1위와 2위의 총점이 같고, 1위의 유물 점수가 2위보다 높을 때
             const art1 = first.artifact === '' ? 0 : first.artifact;
             const art2 = second.artifact === '' ? 0 : second.artifact;
 
@@ -845,7 +804,6 @@
             const artDisplayNum = p.artifact === '' ? 0 : p.artifact;
             let artifactDisplay = `${artDisplayNum}점`;
             
-            // 유물 열세 문구 제거 및 1위의 유물 승리 배지만 간결하게 표시
             if (index > 0 && p.totalScore === sortedPlayers[index - 1].totalScore) {
                 const artCurr = p.artifact === '' ? 0 : p.artifact;
                 const artPrev = sortedPlayers[index - 1].artifact === '' ? 0 : sortedPlayers[index - 1].artifact;
@@ -871,7 +829,6 @@
         sessionData.logs.unshift(logText);
         if (sessionData.logs.length > 25) sessionData.logs.pop();
         renderLogs();
-        saveRoomData();
     }
 
     function renderLogs() {
