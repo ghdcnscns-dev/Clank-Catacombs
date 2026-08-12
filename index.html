@@ -3,9 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>클랭크 카타콤: 실시간 자동점수계산기</title>
+    <title>클랭크 카타콤: 자동점수계산기</title>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Nanum+Gothic:wght@400;700&display=swap" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root {
             --bg-color: #0c0908;
@@ -19,557 +18,72 @@
             --success: #27ae60;
         }
 
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            -webkit-tap-highlight-color: transparent;
-        }
+        * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+        body { background-color: var(--bg-color); color: var(--text-main); font-family: 'Nanum Gothic', sans-serif; background-image: radial-gradient(circle at center, #231914 0%, #0c0908 100%); min-height: 100vh; padding: 10px; }
 
-        body {
-            background-color: var(--bg-color);
-            color: var(--text-main);
-            font-family: 'Nanum Gothic', sans-serif;
-            background-image: radial-gradient(circle at center, #231914 0%, #0c0908 100%);
-            min-height: 100vh;
-            padding: 10px;
-        }
-
-        @keyframes screenShake {
-            0% { transform: translate(0, 0) rotate(0deg); }
-            20% { transform: translate(-6px, 4px) rotate(-0.5deg); }
-            40% { transform: translate(6px, -4px) rotate(0.5deg); }
-            60% { transform: translate(-4px, -2px) rotate(-0.3deg); }
-            80% { transform: translate(4px, 2px) rotate(0.3deg); }
-            100% { transform: translate(0, 0) rotate(0deg); }
-        }
-
-        .shake-effect {
-            animation: screenShake 0.4s ease-in-out;
-        }
-
-        .container {
-            max-width: 480px;
-            margin: 0 auto;
-        }
-
-        header {
-            text-align: center;
-            margin-bottom: 15px;
-            border-bottom: 2px solid var(--accent-gold);
-            padding-bottom: 10px;
-        }
-
-        h1 {
-            font-family: 'Cinzel', serif;
-            color: var(--accent-gold);
-            font-size: 1.5rem;
-            letter-spacing: 1px;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.7);
-            margin-bottom: 5px;
-        }
-
-        .subtitle {
-            color: var(--text-muted);
-            font-size: 0.8rem;
-            margin-bottom: 4px;
-        }
-
-        .creator {
-            color: var(--accent-gold);
-            font-size: 0.75rem;
-            font-family: 'Cinzel', serif;
-            letter-spacing: 0.5px;
-            opacity: 0.85;
-        }
-
-        .card {
-            background-color: var(--panel-bg);
-            border: 2px solid var(--panel-border);
-            border-radius: 8px;
-            padding: 12px;
-            margin-bottom: 15px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.6);
-            position: relative;
-        }
-
-        .card-header-flex {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid var(--panel-border);
-            padding-bottom: 8px;
-            margin-bottom: 12px;
-            gap: 8px;
-        }
-
-        h2 {
-            font-family: 'Cinzel', serif;
-            color: var(--accent-gold);
-            font-size: 1.05rem;
-            margin: 0;
-            border: none;
-            padding: 0;
-            white-space: nowrap;
-        }
-
-        .action-buttons {
-            display: flex;
-            gap: 6px;
-        }
-
-        input[type="text"], input[type="number"] {
-            background-color: #0f0b09;
-            border: 1px solid var(--panel-border);
-            color: var(--text-main);
-            padding: 10px;
-            border-radius: 6px;
-            font-size: 1rem;
-            outline: none;
-            transition: border-color 0.3s;
-            width: 100%;
-        }
-
-        input[type="text"]:focus, input[type="number"]:focus {
-            border-color: var(--accent-gold);
-        }
-
-        button {
-            background: linear-gradient(to bottom, #d4af37, #997a15);
-            color: #0c0908;
-            border: none;
-            padding: 8px 12px;
-            border-radius: 6px;
-            font-weight: bold;
-            font-size: 0.85rem;
-            cursor: pointer;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.4);
-            transition: all 0.2s;
-            white-space: nowrap;
-        }
-
-        button:active {
-            transform: scale(0.96);
-        }
-
-        .btn-dragon {
-            background: linear-gradient(to bottom, #c0392b, #842016);
-            color: #ffffff;
-            border: 1px solid #e74c3c;
-        }
-
-        .players-grid {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-
-        .player-card {
-            background-color: #130f0d;
-            border: 1px solid var(--panel-border);
-            border-radius: 6px;
-            padding: 12px;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            position: relative;
-        }
-
-        .player-card-header {
-            font-family: 'Cinzel', serif;
-            font-size: 1rem;
-            color: var(--accent-gold);
-            border-bottom: 1px dashed var(--panel-border);
-            padding-bottom: 6px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .checkbox-group {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            cursor: pointer;
-            background: #0f0b09;
-            padding: 10px;
-            border-radius: 6px;
-            border: 1px solid var(--panel-border);
-            font-size: 0.9rem;
-        }
-
-        .checkbox-group input {
-            width: 20px;
-            height: 20px;
-            accent-color: var(--accent-gold);
-            cursor: pointer;
-        }
-
-        .score-inputs-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 8px;
-        }
-
-        .input-group {
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-        }
-
-        .input-group label {
-            font-size: 0.8rem;
-            color: var(--text-muted);
-        }
-
-        .leaderboard-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 5px;
-            font-size: 0.85rem;
-        }
-
-        .leaderboard-table th, .leaderboard-table td {
-            padding: 8px 4px;
-            text-align: center;
-            border-bottom: 1px solid var(--panel-border);
-        }
-
-        .leaderboard-table th {
-            background-color: #231914;
-            color: var(--accent-gold);
-            font-family: 'Cinzel', serif;
-            font-size: 0.8rem;
-        }
-
-        .rank-1 {
-            color: var(--accent-gold);
-            font-weight: bold;
-        }
-
-        .log-container {
-            background-color: #0f0b09;
-            border: 1px solid var(--panel-border);
-            border-radius: 4px;
-            height: 120px;
-            overflow-y: auto;
-            padding: 8px;
-            font-family: monospace;
-            font-size: 0.75rem;
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-        }
-
-        .log-item {
-            padding: 3px 6px;
-            background: rgba(255, 255, 255, 0.03);
-            border-left: 3px solid var(--accent-gold);
-        }
-
-        .dead-badge { color: var(--danger); font-weight: bold; }
-        .alive-badge { color: var(--success); font-weight: bold; }
-        .hidden { display: none !important; }
+        .container { max-width: 100%; margin: 0 auto; }
+        header { text-align: center; margin-bottom: 15px; border-bottom: 2px solid var(--accent-gold); padding-bottom: 10px; }
+        h1 { font-family: 'Cinzel', serif; color: var(--accent-gold); font-size: 1.5rem; letter-spacing: 1px; text-shadow: 0 2px 4px rgba(0,0,0,0.7); margin-bottom: 5px; }
+        
+        .card { background-color: var(--panel-bg); border: 2px solid var(--panel-border); border-radius: 8px; padding: 12px; margin-bottom: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.6); }
+        
+        input[type="text"], button { width: 100%; padding: 10px; margin-bottom: 10px; border-radius: 6px; border: 1px solid var(--panel-border); background: #0f0b09; color: var(--text-main); }
+        button { background: linear-gradient(to bottom, #d4af37, #997a15); color: #0c0908; font-weight: bold; cursor: pointer; }
+        
+        #room-section { text-align: center; }
+        .hidden { display: none; }
     </style>
 </head>
 <body>
 
-<div class="container" id="main-container">
+<div class="container">
     <header>
         <h1>CLANK! CATACOMBS</h1>
-        <div class="subtitle">실시간 자동점수계산기</div>
-        <div class="creator">제작자 : 천상민</div>
+        <div class="subtitle">방 생성 및 점수 계산</div>
     </header>
 
-    <!-- 1. 로비 섹션 (방 만들기 및 참여) -->
-    <section class="card" id="lobby-section">
-        <h2 style="margin-bottom: 10px;">참가 설정</h2>
-        <div style="space-y: 10px;">
-            <div style="margin-bottom: 10px;">
-                <label style="display:block; font-size:0.85rem; color:var(--text-muted); margin-bottom:4px;">탐험가 닉네임</label>
-                <input type="text" id="player-name" placeholder="본인 닉네임 입력">
-            </div>
-            
-            <div style="display: flex; gap: 8px; margin-top: 15px;">
-                <button onclick="createRoom()" style="flex: 1; padding: 12px;">방 만들기</button>
-            </div>
-            <div style="display: flex; gap: 8px; margin-top: 10px;">
-                <input type="text" id="room-code-input" placeholder="참가 코드 4자리" style="text-transform: uppercase; text-align: center; font-weight: bold; letter-spacing: 2px;">
-                <button onclick="joinRoom()" style="background: linear-gradient(to bottom, #2980b9, #1f618d); color: #fff; padding: 12px 16px;">참여하기</button>
-            </div>
-        </div>
+    <!-- 방 생성/입장 섹션 -->
+    <section class="card" id="room-section">
+        <h2>던전 입장</h2>
+        <input type="text" id="room-name" placeholder="방 이름을 입력하세요">
+        <button id="btn-create-room">새로운 던전 생성</button>
+        <div id="room-info" style="margin-top:10px; color: var(--accent-gold);"></div>
     </section>
-
-    <!-- 2. 게임 및 점수 입력 섹션 -->
-    <div id="game-section" class="hidden">
-        <div class="card" style="background: rgba(61,46,36,0.3); display: flex; justify-content: space-between; align-items: center; padding: 10px 14px;">
-            <div>
-                <span style="font-size: 0.75rem; color: var(--text-muted); display: block;">참가 코드</span>
-                <span id="display-room-code" style="font-size: 1.2rem; font-family: monospace; font-weight: bold; color: var(--accent-gold); letter-spacing: 2px;">----</span>
-            </div>
-            <button onclick="leaveRoom()" style="background: transparent; border: 1px solid var(--danger); color: var(--danger); padding: 6px 10px; font-size: 0.75rem;">나가기</button>
-        </div>
-
-        <section class="card">
-            <div class="card-header-flex">
-                <h2>내 점수 입력</h2>
-                <div class="action-buttons">
-                    <button class="btn-dragon" id="btn-dragon-attack">드래곤 소리</button>
-                </div>
-            </div>
-            
-            <div id="my-scoring-card" class="player-card">
-                <div class="player-card-header">
-                    <span id="my-card-title">내 정보</span>
-                    <span id="my-calculated-total" style="color: var(--accent-gold); font-weight: bold;">0점</span>
-                </div>
-
-                <label class="checkbox-group">
-                    <input type="checkbox" id="my-is-alive" onchange="updateMyData()">
-                    <span>지하 깊은 곳에서 탈출 성공 (탈출 실패 시 유물/골드 점수 무효)</span>
-                </label>
-
-                <div class="score-inputs-grid">
-                    <div class="input-group">
-                        <label>유물 점수합계</label>
-                        <input type="number" id="my-artifact" placeholder="0" oninput="updateMyData()">
-                    </div>
-                    <div class="input-group">
-                        <label>골드 (5골드당 1점)</label>
-                        <input type="number" id="my-gold" placeholder="0" oninput="updateMyData()">
-                    </div>
-                    <div class="input-group">
-                        <label>비밀 토큰 점수</label>
-                        <input type="number" id="my-token" placeholder="0" oninput="updateMyData()">
-                    </div>
-                    <div class="input-group">
-                        <label>카드 점수</label>
-                        <input type="number" id="my-card" placeholder="0" oninput="updateMyData()">
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- 실시간 순위표 및 피드 섹션 -->
-        <section class="card">
-            <h2>실시간 순위</h2>
-            <table class="leaderboard-table">
-                <thead>
-                    <tr>
-                        <th>순위</th>
-                        <th>이름</th>
-                        <th>상태</th>
-                        <th>유물</th>
-                        <th>총점</th>
-                    </tr>
-                </thead>
-                <tbody id="leaderboard-body"></tbody>
-            </table>
-
-            <h2 style="margin-top: 20px; font-size: 1rem;">던전 이벤트 피드</h2>
-            <div class="log-container" id="score-log-feed">
-                <div class="log-item">[시스템] 카타콤 모험이 시작되었습니다.</div>
-            </div>
-        </section>
-    </div>
 </div>
 
 <script>
-    const SUPABASE_URL = 'https://ebgziywanxwxqohxhvam.supabase.co';
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImViZ3ppeXdhbnh3eHFvaHhodmFtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY0Njc2MjQsImV4cCI6MjEwMjA0MzYyNH0.FUGQjkx6Hv801UeeE_Ti7XXlVPRiG1bOIuHTEJXDRBA';
-    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const SUPABASE_URL = "https://dsmglkqlmqxqcamhkfww.supabase.co/rest/v1/";
+    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRzbWdsa3FsbXF4cWNhbWhrZnd3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY1MTU4MzEsImV4cCI6MjEwMjA5MTgzMX0.hGZx467Oa4e9p39JMvkNPYfPuAmjQN--7GyNqYiv66o";
 
-    let currentRoomCode = null;
-    let myPlayerId = null;
+    document.getElementById('btn-create-room').addEventListener('click', async () => {
+        const roomName = document.getElementById('room-name').value.trim();
+        if (!roomName) return alert("방 이름을 입력해주세요.");
 
-    // 드래곤 공격 사운드 및 효과
-    function playDragonSound() {
         try {
-            const AudioContext = window.AudioContext || window.webkitAudioContext;
-            if (!AudioContext) return;
-            const ctx = new AudioContext();
-            const osc = ctx.createOscillator();
-            const gainNode = ctx.createGain();
+            const response = await fetch(`${SUPABASE_URL}rooms`, {
+                method: 'POST',
+                headers: {
+                    'apikey': SUPABASE_KEY,
+                    'Authorization': `Bearer ${SUPABASE_KEY}`,
+                    'Content-Type': 'application/json',
+                    'Prefer': 'return=representation'
+                },
+                body: JSON.stringify({ name: roomName })
+            });
 
-            osc.type = 'sawtooth';
-            osc.frequency.setValueAtTime(130, ctx.currentTime);
-            osc.frequency.exponentialRampToValueAtTime(35, ctx.currentTime + 0.6);
-
-            gainNode.gain.setValueAtTime(0.4, ctx.currentTime);
-            gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.6);
-
-            osc.connect(gainNode);
-            gainNode.connect(ctx.destination);
-
-            osc.start();
-            osc.stop(ctx.currentTime + 0.6);
+            if (response.ok) {
+                const data = await response.json();
+                document.getElementById('room-info').textContent = `던전 '${roomName}' 생성 완료! (ID: ${data[0].id})`;
+            } else {
+                alert("방 생성 실패");
+            }
         } catch (e) {
-            console.log("AudioContext not supported", e);
+            console.error(e);
+            alert("서버 연결 오류");
         }
-    }
-
-    document.getElementById('btn-dragon-attack').addEventListener('click', () => {
-        playDragonSound();
-        const mainContainer = document.getElementById('main-container');
-        mainContainer.classList.remove('shake-effect');
-        void mainContainer.offsetWidth;
-        mainContainer.classList.add('shake-effect');
-
-        // 브로드캐스트로 모든 참여자에게 드래곤 습격 전송
-        supabaseClient.channel('room-channel-' + currentRoomCode).send({
-            type: 'broadcast',
-            event: 'dragon_attack',
-            payload: { name: document.getElementById('player-name').value }
-        });
     });
-
-    function generateRoomCode() { 
-        return Math.random().toString(36).substring(2, 6).toUpperCase(); 
-    }
-
-    async function createRoom() {
-        const name = document.getElementById('player-name').value.trim();
-        if (!name) { alert('닉네임을 입력해주세요!'); return; }
-        const code = generateRoomCode();
-        
-        await supabaseClient.from('rooms').insert([{ code }]);
-        const { data, error } = await supabaseClient.from('players').insert([{ 
-            room_code: code, 
-            name: name, 
-            score: 0,
-            is_alive: true,
-            artifact: 0,
-            gold: 0,
-            token: 0,
-            card_score: 0
-        }]).select();
-
-        if (error) { alert('방 생성 실패'); return; }
-
-        currentRoomCode = code; 
-        myPlayerId = data[0].id; 
-        enterGameUI();
-    }
-
-    async function joinRoom() {
-        const name = document.getElementById('player-name').value.trim();
-        const code = document.getElementById('room-code-input').value.trim().toUpperCase();
-        if (!name || !code) { alert('닉네임과 코드를 확인해주세요!'); return; }
-        
-        const { data: roomData } = await supabaseClient.from('rooms').select('code').eq('code', code).single();
-        if (!roomData) { alert('존재하지 않는 방입니다.'); return; }
-        
-        const { data, error } = await supabaseClient.from('players').insert([{ 
-            room_code: code, 
-            name: name, 
-            score: 0,
-            is_alive: true,
-            artifact: 0,
-            gold: 0,
-            token: 0,
-            card_score: 0
-        }]).select();
-
-        if (error) { alert('참가 실패'); return; }
-
-        currentRoomCode = code; 
-        myPlayerId = data[0].id; 
-        enterGameUI();
-    }
-
-    function enterGameUI() {
-        document.getElementById('lobby-section').classList.add('hidden');
-        document.getElementById('game-section').classList.remove('hidden');
-        document.getElementById('display-room-code').innerText = currentRoomCode;
-        document.getElementById('my-card-title').innerText = document.getElementById('player-name').value + ' (나)';
-        
-        fetchLeaderboard();
-        subscribeRealtime();
-    }
-
-    // 내 점수 변경 시 실시간 계산 및 DB 업데이트
-    async function updateMyData() {
-        const isAlive = document.getElementById('my-is-alive').checked;
-        const artifact = parseInt(document.getElementById('my-artifact').value) || 0;
-        const goldInput = parseInt(document.getElementById('my-gold').value) || 0;
-        const token = parseInt(document.getElementById('my-token').value) || 0;
-        const card = parseInt(document.getElementById('my-card').value) || 0;
-
-        // 클랭크 규칙: 탈출 실패 시 유물(artifact)과 골드(gold) 점수는 0점 처리
-        const effectiveArtifact = isAlive ? artifact : 0;
-        const effectiveGold = isAlive ? Math.floor(goldInput / 5) : 0;
-        const totalScore = effectiveArtifact + effectiveGold + token + card;
-
-        document.getElementById('my-calculated-total').innerText = totalScore + '점';
-
-        await supabaseClient.from('players').update({ 
-            score: totalScore,
-            is_alive: isAlive,
-            artifact: artifact,
-            gold: goldInput,
-            token: token,
-            card_score: card
-        }).eq('id', myPlayerId);
-    }
-
-    async function fetchLeaderboard() {
-        const { data } = await supabaseClient.from('players').select('*').eq('room_code', currentRoomCode).order('score', { ascending: false });
-        if (data) renderLeaderboard(data);
-    }
-
-    function renderLeaderboard(players) {
-        const tbody = document.getElementById('leaderboard-body');
-        tbody.innerHTML = '';
-        
-        players.forEach((player, index) => {
-            const isMe = player.id === myPlayerId;
-            const tr = document.createElement('tr');
-            if (isMe) tr.style.background = 'rgba(212, 175, 55, 0.08)';
-            
-            tr.innerHTML = `
-                <td class="${index === 0 ? 'rank-1' : ''}">${index + 1}위</td>
-                <td>${player.name} ${isMe ? '(나)' : ''}</td>
-                <td>${player.is_alive ? '<span class="alive-badge">탈출성공</span>' : '<span class="dead-badge">미탈출</span>'}</td>
-                <td>${player.artifact || 0}</td>
-                <td style="font-weight: bold; color: var(--accent-gold);">${player.score}점</td>
-            `;
-            tbody.appendChild(tr);
-        });
-    }
-
-    function subscribeRealtime() {
-        const channel = supabaseClient.channel('room-channel-' + currentRoomCode);
-        channel
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'players', filter: `room_code=eq.${currentRoomCode}` }, () => {
-                fetchLeaderboard();
-            })
-            .on('broadcast', { event: 'dragon_attack' }, (payload) => {
-                playDragonSound();
-                const mainContainer = document.getElementById('main-container');
-                mainContainer.classList.remove('shake-effect');
-                void mainContainer.offsetWidth;
-                mainContainer.classList.add('shake-effect');
-                
-                addLog(`[경고] ${payload.payload.name}님이 드래곤을 자극했습니다! 🔥`);
-            })
-            .subscribe();
-    }
-
-    function addLog(text) {
-        const logFeed = document.getElementById('score-log-feed');
-        const div = document.createElement('div');
-        div.className = 'log-item';
-        div.innerText = text;
-        logFeed.prepend(div);
-        if (logFeed.children.length > 20) logFeed.lastElementChild.remove();
-    }
-
-    async function leaveRoom() {
-        if (myPlayerId) {
-            await supabaseClient.from('players').delete().eq('id', myPlayerId);
-        }
-        location.reload();
-    }
 </script>
+
 </body>
 </html>
+```[cite: 1]
