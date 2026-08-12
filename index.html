@@ -3,8 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>클랭크 카타콤: 자동점수계산기</title>
+    <title>클랭크 카타콤: 모바일 점수 정산소</title>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Nanum+Gothic:wght@400;700&display=swap" rel="stylesheet">
+    <!-- Supabase JS CDN 추가 -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root {
             --bg-color: #0c0908;
@@ -18,72 +20,834 @@
             --success: #27ae60;
         }
 
-        * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-        body { background-color: var(--bg-color); color: var(--text-main); font-family: 'Nanum Gothic', sans-serif; background-image: radial-gradient(circle at center, #231914 0%, #0c0908 100%); min-height: 100vh; padding: 10px; }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+        }
 
-        .container { max-width: 100%; margin: 0 auto; }
-        header { text-align: center; margin-bottom: 15px; border-bottom: 2px solid var(--accent-gold); padding-bottom: 10px; }
-        h1 { font-family: 'Cinzel', serif; color: var(--accent-gold); font-size: 1.5rem; letter-spacing: 1px; text-shadow: 0 2px 4px rgba(0,0,0,0.7); margin-bottom: 5px; }
-        
-        .card { background-color: var(--panel-bg); border: 2px solid var(--panel-border); border-radius: 8px; padding: 12px; margin-bottom: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.6); }
-        
-        input[type="text"], button { width: 100%; padding: 10px; margin-bottom: 10px; border-radius: 6px; border: 1px solid var(--panel-border); background: #0f0b09; color: var(--text-main); }
-        button { background: linear-gradient(to bottom, #d4af37, #997a15); color: #0c0908; font-weight: bold; cursor: pointer; }
-        
-        #room-section { text-align: center; }
-        .hidden { display: none; }
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: 'Nanum Gothic', sans-serif;
+            background-image: radial-gradient(circle at center, #231914 0%, #0c0908 100%);
+            min-height: 100vh;
+            padding: 10px;
+        }
+
+        @keyframes screenShake {
+            0% { transform: translate(0, 0) rotate(0deg); }
+            20% { transform: translate(-6px, 4px) rotate(-0.5deg); }
+            40% { transform: translate(6px, -4px) rotate(0.5deg); }
+            60% { transform: translate(-4px, -2px) rotate(-0.3deg); }
+            80% { transform: translate(4px, 2px) rotate(0.3deg); }
+            100% { transform: translate(0, 0) rotate(0deg); }
+        }
+
+        .shake-effect {
+            animation: screenShake 0.4s ease-in-out;
+        }
+
+        .container {
+            max-width: 100%;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 15px;
+            border-bottom: 2px solid var(--accent-gold);
+            padding-bottom: 10px;
+        }
+
+        h1 {
+            font-family: 'Cinzel', serif;
+            color: var(--accent-gold);
+            font-size: 1.5rem;
+            letter-spacing: 1px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.7);
+            margin-bottom: 5px;
+        }
+
+        .subtitle {
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            margin-bottom: 4px;
+        }
+
+        .creator {
+            color: var(--accent-gold);
+            font-size: 0.75rem;
+            font-family: 'Cinzel', serif;
+            letter-spacing: 0.5px;
+            opacity: 0.85;
+        }
+
+        .card {
+            background-color: var(--panel-bg);
+            border: 2px solid var(--panel-border);
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 15px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.6);
+            position: relative;
+        }
+
+        .card-header-flex {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--panel-border);
+            padding-bottom: 8px;
+            margin-bottom: 12px;
+            gap: 8px;
+        }
+
+        h2 {
+            font-family: 'Cinzel', serif;
+            color: var(--accent-gold);
+            font-size: 1.05rem;
+            margin: 0;
+            border: none;
+            padding: 0;
+            white-space: nowrap;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 6px;
+        }
+
+        input[type="text"], input[type="number"] {
+            background-color: #0f0b09;
+            border: 1px solid var(--panel-border);
+            color: var(--text-main);
+            padding: 10px;
+            border-radius: 6px;
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.3s;
+            width: 100%;
+        }
+
+        input[type="text"]:focus, input[type="number"]:focus {
+            border-color: var(--accent-gold);
+        }
+
+        button {
+            background: linear-gradient(to bottom, #d4af37, #997a15);
+            color: #0c0908;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-weight: bold;
+            font-size: 0.85rem;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        button:active {
+            transform: scale(0.96);
+        }
+
+        .btn-dragon {
+            background: linear-gradient(to bottom, #c0392b, #842016);
+            color: #ffffff;
+            border: 1px solid #e74c3c;
+        }
+
+        .btn-danger-subtle {
+            background: transparent;
+            border: 1px solid var(--danger);
+            color: var(--danger);
+            padding: 4px 8px;
+            font-size: 0.75rem;
+        }
+
+        .btn-danger-subtle:active {
+            background-color: var(--danger);
+            color: white;
+        }
+
+        .room-lobby {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            text-align: center;
+            padding: 20px 0;
+        }
+
+        .room-lobby.hidden {
+            display: none;
+        }
+
+        .room-info-bar {
+            background: #130f0d;
+            border: 1px solid var(--panel-border);
+            padding: 8px 12px;
+            border-radius: 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.85rem;
+            margin-bottom: 12px;
+        }
+
+        .players-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .player-card {
+            background-color: #130f0d;
+            border: 1px solid var(--panel-border);
+            border-radius: 6px;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .player-card-header {
+            font-family: 'Cinzel', serif;
+            font-size: 1rem;
+            color: var(--accent-gold);
+            border-bottom: 1px dashed var(--panel-border);
+            padding-bottom: 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            background: #0f0b09;
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid var(--panel-border);
+            font-size: 0.9rem;
+        }
+
+        .checkbox-group input {
+            width: 20px;
+            height: 20px;
+            accent-color: var(--accent-gold);
+            cursor: pointer;
+        }
+
+        .score-inputs-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .input-group label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .death-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(12, 9, 8, 0.92);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 12px;
+            z-index: 10;
+            transition: opacity 0.3s ease;
+        }
+
+        .death-overlay.hidden {
+            display: none;
+        }
+
+        .death-title {
+            font-family: 'Cinzel', serif;
+            color: var(--danger);
+            font-size: 1.8rem;
+            font-weight: bold;
+            letter-spacing: 2px;
+            text-shadow: 0 0 10px rgba(192, 57, 43, 0.6);
+            animation: pulseText 1.5s infinite alternate;
+        }
+
+        @keyframes pulseText {
+            from { transform: scale(1); text-shadow: 0 0 5px rgba(192, 57, 43, 0.4); }
+            to { transform: scale(1.05); text-shadow: 0 0 15px rgba(192, 57, 43, 0.8); }
+        }
+
+        .btn-close-death {
+            background: transparent;
+            border: 2px solid var(--danger);
+            color: var(--danger);
+            padding: 6px 16px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            box-shadow: none;
+        }
+
+        .leaderboard-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 5px;
+            font-size: 0.85rem;
+        }
+
+        .leaderboard-table th, .leaderboard-table td {
+            padding: 8px 4px;
+            text-align: center;
+            border-bottom: 1px solid var(--panel-border);
+        }
+
+        .leaderboard-table th {
+            background-color: #231914;
+            color: var(--accent-gold);
+            font-family: 'Cinzel', serif;
+            font-size: 0.8rem;
+        }
+
+        .rank-1 {
+            color: var(--accent-gold);
+            font-weight: bold;
+        }
+
+        .tie-note {
+            font-size: 0.65rem;
+            color: var(--accent-gold);
+            display: block;
+            margin-top: 1px;
+        }
+
+        .log-container {
+            background-color: #0f0b09;
+            border: 1px solid var(--panel-border);
+            border-radius: 4px;
+            height: 110px;
+            overflow-y: auto;
+            padding: 8px;
+            font-family: monospace;
+            font-size: 0.75rem;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .log-item {
+            padding: 3px 6px;
+            background: rgba(255, 255, 255, 0.03);
+            border-left: 3px solid var(--accent-gold);
+        }
+
+        .dead-badge {
+            color: var(--danger);
+            font-weight: bold;
+        }
+
+        .alive-badge {
+            color: var(--success);
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
 
-<div class="container">
+<div class="container" id="main-container">
     <header>
         <h1>CLANK! CATACOMBS</h1>
-        <div class="subtitle">방 생성 및 점수 계산</div>
+        <div class="subtitle">실시간 점구 계산기</div>
+        <div class="creator">제작자 : 천상민</div>
     </header>
 
-    <!-- 방 생성/입장 섹션 -->
-    <section class="card" id="room-section">
-        <h2>던전 입장</h2>
-        <input type="text" id="room-name" placeholder="방 이름을 입력하세요">
-        <button id="btn-create-room">새로운 던전 생성</button>
-        <div id="room-info" style="margin-top:10px; color: var(--accent-gold);"></div>
+    <!-- 방 생성 및 참여 로비 섹션 -->
+    <section class="card" id="room-lobby-section">
+        <h2>게임 방 입장</h2>
+        <div class="room-lobby">
+            <div style="font-size: 0.85rem; color: var(--text-muted);">새로운 방을 만들거나, 공유받은 참여 코드로 입장하세요.</div>
+            <button id="btn-create-room" style="padding: 12px; font-size: 1rem;">✨새 방 생성하기</button>
+            <div style="display: flex; gap: 8px; margin-top: 10px;">
+                <input type="text" id="input-room-code" placeholder="참여 코드 6자리 입력" style="text-align: center; letter-spacing: 2px; font-weight: bold;">
+                <button id="btn-join-room" style="padding: 0 20px;">입장</button>
+            </div>
+        </div>
     </section>
+
+    <!-- 메인 게임 영역 (방 입장 후 활성화) -->
+    <div id="game-content-area" style="display: none;">
+        <div class="room-info-bar">
+            <span>방 코드: <strong id="display-room-code" style="color: var(--accent-gold); letter-spacing: 1px;"></strong></span>
+            <button id="btn-leave-room" class="btn-danger-subtle">나가기</button>
+        </div>
+
+        <!-- 점수 기록 섹션 -->
+        <section class="card" id="scoring-section">
+            <div class="card-header-flex">
+                <h2>탐험가 관리</h2>
+                <div class="action-buttons">
+                    <button class="btn-dragon" id="btn-dragon-attack">🐉 드래곤</button>
+                    <button id="btn-add-player">+ 인원추가</button>
+                </div>
+            </div>
+            <div id="players-scoring-container" class="players-grid"></div>
+        </section>
+
+        <!-- 실시간 순위표 및 피드 섹션 -->
+        <section class="card" id="dashboard-section">
+            <h2>실시간 순위</h2>
+            <table class="leaderboard-table">
+                <thead>
+                    <tr>
+                        <th>순위</th>
+                        <th>이름</th>
+                        <th>상태</th>
+                        <th>유물</th>
+                        <th>총점</th>
+                    </tr>
+                </thead>
+                <tbody id="leaderboard-body"></tbody>
+            </table>
+
+            <h2 style="margin-top: 20px; font-size: 1rem;">던전 이벤트 피드</h2>
+            <div class="log-container" id="score-log-feed">
+                <div class="log-item">[시스템] 카타콤 모험이 시작되었습니다.</div>
+            </div>
+        </section>
+    </div>
 </div>
 
 <script>
-    const SUPABASE_URL = "https://dsmglkqlmqxqcamhkfww.supabase.co/rest/v1/";
-    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRzbWdsa3FsbXF4cWNhbWhrZnd3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY1MTU4MzEsImV4cCI6MjEwMjA5MTgzMX0.hGZx467Oa4e9p39JMvkNPYfPuAmjQN--7GyNqYiv66o";
+    // Supabase 설정
+    const SUPABASE_URL = 'https://dsmglkqlmqxqcamhkfww.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRzbWdsa3FsbXF4cWNhbWhrZnd3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY1MTU4MzEsImV4cCI6MjEwMjA5MTgzMX0.hGZx467Oa4e9p39JMvkNPYfPuAmjQN--7GyNqYiv66o';
+    
+    const { createClient } = supabase;
+    const db = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    document.getElementById('btn-create-room').addEventListener('click', async () => {
-        const roomName = document.getElementById('room-name').value.trim();
-        if (!roomName) return alert("방 이름을 입력해주세요.");
+    let currentRoomCode = null;
+    let syncInterval = null;
+    let sessionData = { players: [] };
 
-        try {
-            const response = await fetch(`${SUPABASE_URL}rooms`, {
-                method: 'POST',
-                headers: {
-                    'apikey': SUPABASE_KEY,
-                    'Authorization': `Bearer ${SUPABASE_KEY}`,
-                    'Content-Type': 'application/json',
-                    'Prefer': 'return=representation'
-                },
-                body: JSON.stringify({ name: roomName })
-            });
+    const roomLobbySection = document.getElementById('room-lobby-section');
+    const gameContentArea = document.getElementById('game-content-area');
+    const displayRoomCode = document.getElementById('display-room-code');
+    const inputRoomCode = document.getElementById('input-room-code');
+    const btnCreateRoom = document.getElementById('btn-create-room');
+    const btnJoinRoom = document.getElementById('btn-join-room');
+    const btnLeaveRoom = document.getElementById('btn-leave-room');
 
-            if (response.ok) {
-                const data = await response.json();
-                document.getElementById('room-info').textContent = `던전 '${roomName}' 생성 완료! (ID: ${data[0].id})`;
-            } else {
-                alert("방 생성 실패");
-            }
-        } catch (e) {
-            console.error(e);
-            alert("서버 연결 오류");
+    const playersScoringContainer = document.getElementById('players-scoring-container');
+    const btnAddPlayer = document.getElementById('btn-add-player');
+    const btnDragonAttack = document.getElementById('btn-dragon-attack');
+    const mainContainer = document.getElementById('main-container');
+    const leaderboardBody = document.getElementById('leaderboard-body');
+    const scoreLogFeed = document.getElementById('score-log-feed');
+
+    // 랜덤 6자리 방 코드 생성
+    function generateRoomCode() {
+        return Math.random().toString(36).substring(2, 8).toUpperCase();
+    }
+
+    // 방 생성 버튼
+    btnCreateRoom.addEventListener('click', async () => {
+        const code = generateRoomCode();
+        // 플레이어 1명만 생성되도록 수정
+        const initialPlayers = [
+            { id: 0, name: "플레이어 1", isAlive: true, mission: false, artifact: '', gold: '', token: '', card: '', totalScore: 0 }
+        ];
+
+        const { error } = await db.from('clank_rooms').insert([
+            { room_code: code, data: { players: initialPlayers, logs: ["[시스템] 카타콤 모험이 시작되었습니다."] } }
+        ]);
+
+        if (error) {
+            alert('방 생성 중 오류가 발생했습니다: ' + error.message);
+            return;
         }
+
+        enterRoom(code, { players: initialPlayers, logs: ["[시스템] 카타콤 모험이 시작되었습니다."] });
     });
+
+    // 방 입장 버튼
+    btnJoinRoom.addEventListener('click', async () => {
+        const code = inputRoomCode.value.trim().toUpperCase();
+        if (!code || code.length < 4) {
+            alert('올바른 4자리 참여 코드를 입력해주세요.');
+            return;
+        }
+
+        const { data, error } = await db.from('clank_rooms').select('*').eq('room_code', code).single();
+
+        if (error || !data) {
+            alert('존재하지 않는 방 코드이거나 연결 오류입니다.');
+            return;
+        }
+
+        enterRoom(code, data.data);
+    });
+
+    // 방 나가기 버튼
+    btnLeaveRoom.addEventListener('click', () => {
+        if (syncInterval) clearInterval(syncInterval);
+        currentRoomCode = null;
+        gameContentArea.style.display = 'none';
+        roomLobbySection.classList.remove('hidden');
+        inputRoomCode.value = '';
+    });
+
+    function enterRoom(code, data) {
+        currentRoomCode = code;
+        sessionData = data;
+        displayRoomCode.textContent = code;
+        roomLobbySection.classList.add('hidden');
+        gameContentArea.style.display = 'block';
+
+        renderScoringCards();
+        updateLeaderboard();
+        renderLogs();
+
+        // 2초마다 Supabase에서 최신 데이터를 가져와 동기화 (실시간 반영)
+        if (syncInterval) clearInterval(syncInterval);
+        syncInterval = setInterval(fetchRoomData, 2000);
+    }
+
+    async function fetchRoomData() {
+        if (!currentRoomCode) return;
+        const { data, error } = await db.from('clank_rooms').select('data').eq('room_code', currentRoomCode).single();
+        if (data && data.data) {
+            // 로컬 입력 손실 방지를 위해 포커스 중인 입력창이 없을 때만 업데이트 수행
+            const activeEl = document.activeElement;
+            const isTyping = activeEl && (activeEl.tagName === 'INPUT' && !activeEl.classList.contains('input-is-alive'));
+            
+            if (!isTyping) {
+                sessionData = data.data;
+                renderScoringCards();
+                updateLeaderboard();
+                renderLogs();
+            }
+        }
+    }
+
+    async function saveRoomData() {
+        if (!currentRoomCode) return;
+        await db.from('clank_rooms').update({ data: sessionData }).eq('room_code', currentRoomCode);
+    }
+
+    function playDragonSound() {
+        try {
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            if (!AudioContext) return;
+            const ctx = new AudioContext();
+            const osc = ctx.createOscillator();
+            const gainNode = ctx.createGain();
+
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(130, ctx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(35, ctx.currentTime + 0.6);
+
+            gainNode.gain.setValueAtTime(0.4, ctx.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.6);
+
+            osc.connect(gainNode);
+            gainNode.connect(ctx.destination);
+
+            osc.start();
+            osc.stop(ctx.currentTime + 0.6);
+        } catch (e) {
+            console.log("AudioContext not supported", e);
+        }
+    }
+
+    btnDragonAttack.addEventListener('click', () => {
+        playDragonSound();
+        mainContainer.classList.remove('shake-effect');
+        void mainContainer.offsetWidth;
+        mainContainer.classList.add('shake-effect');
+        addLog(`[경고] 드래곤 습격 발생! 🔥`);
+    });
+
+    btnAddPlayer.addEventListener('click', () => {
+        const newId = sessionData.players.length > 0 ? Math.max(...sessionData.players.map(p => p.id)) + 1 : 0;
+        const newName = `플레이어 ${sessionData.players.length + 1}`;
+        
+        sessionData.players.push({
+            id: newId,
+            name: newName,
+            isAlive: true,
+            mission: false,
+            artifact: '',
+            gold: '',
+            token: '',
+            card: '',
+            totalScore: 0
+        });
+
+        renderScoringCards();
+        updateLeaderboard();
+        addLog(`[시스템] '${newName}' 합류.`);
+        saveRoomData();
+    });
+
+    window.removePlayer = function(id) {
+        const target = sessionData.players.find(p => p.id === id);
+        if (target) {
+            sessionData.players = sessionData.players.filter(p => p.id !== id);
+            renderScoringCards();
+            updateLeaderboard();
+            addLog(`[시스템] '${target.name}' 제외.`);
+            saveRoomData();
+        }
+    };
+
+    function renderScoringCards() {
+        playersScoringContainer.innerHTML = '';
+        
+        if (sessionData.players.length === 0) {
+            playersScoringContainer.innerHTML = `<div style="text-align: center; color: var(--text-muted); padding: 15px; font-size: 0.85rem;">등록된 탐험가가 없습니다. 우측 상단의 '+ 인원추가' 버튼을 눌러주세요.</div>`;
+            return;
+        }
+
+        sessionData.players.forEach(p => {
+            const cardDiv = document.createElement('div');
+            cardDiv.className = 'player-card';
+            cardDiv.innerHTML = `
+                <div class="death-overlay ${p.isAlive ? 'hidden' : ''}" data-overlay-id="${p.id}">
+                    <div class="death-title">사망</div>
+                    <button class="btn-close-death" data-id="${p.id}">✕ 닫기</button>
+                </div>
+
+                <div class="player-card-header">
+                    <input type="text" class="p-name-input" data-id="${p.id}" value="${p.name}" style="background:transparent; border:none; color:var(--accent-gold); font-family:'Cinzel', serif; font-size:1rem; width:120px;" placeholder="이름 입력">
+                    <button class="btn-danger-subtle" onclick="removePlayer(${p.id})">삭제</button>
+                </div>
+                <label class="checkbox-group">
+                    <input type="checkbox" class="input-is-alive" data-id="${p.id}" ${p.isAlive ? 'checked' : ''}>
+                    <span>생존 여부(사망시 체크풀기)</span>
+                </label>
+                <label class="checkbox-group">
+                    <input type="checkbox" class="input-mission" data-id="${p.id}" ${p.mission ? 'checked' : ''} ${!p.isAlive ? 'disabled' : ''}>
+                    <span>임무 완수 (+20점)</span>
+                </label>
+                <div class="score-inputs-grid">
+                    <div class="input-group">
+                        <label>유물 점수</label>
+                        <input type="number" class="input-artifact" data-id="${p.id}" value="${p.artifact}" min="0" placeholder="" ${!p.isAlive ? 'disabled' : ''}>
+                    </div>
+                    <div class="input-group">
+                        <label>금화 (+1점)</label>
+                        <input type="number" class="input-gold" data-id="${p.id}" value="${p.gold}" min="0" placeholder="" ${!p.isAlive ? 'disabled' : ''}>
+                    </div>
+                    <div class="input-group">
+                        <label>토큰 점수</label>
+                        <input type="number" class="input-token" data-id="${p.id}" value="${p.token}" min="0" placeholder="" ${!p.isAlive ? 'disabled' : ''}>
+                    </div>
+                    <div class="input-group">
+                        <label>카드 점수</label>
+                        <input type="number" class="input-card" data-id="${p.id}" value="${p.card}" min="0" placeholder="" ${!p.isAlive ? 'disabled' : ''}>
+                    </div>
+                </div>
+            `;
+            playersScoringContainer.appendChild(cardDiv);
+        });
+
+        attachLiveEventListeners();
+    }
+
+    function attachLiveEventListeners() {
+        document.querySelectorAll('.p-name-input').forEach(input => {
+            input.addEventListener('input', (e) => {
+                const id = parseInt(e.target.dataset.id);
+                const player = sessionData.players.find(p => p.id === id);
+                if (player) {
+                    player.name = e.target.value.trim() || `모험가`;
+                    updateLeaderboard();
+                    saveRoomData();
+                }
+            });
+        });
+
+        document.querySelectorAll('.input-is-alive').forEach(chk => {
+            chk.addEventListener('change', (e) => {
+                const id = parseInt(e.target.dataset.id);
+                const card = e.target.closest('.player-card');
+                const overlay = card.querySelector('.death-overlay');
+                const inputs = card.querySelectorAll('input:not(.input-is-alive):not(.p-name-input)');
+                
+                if (!e.target.checked) {
+                    overlay.classList.remove('hidden');
+                    inputs.forEach(input => {
+                        input.disabled = true;
+                        if (input.type === 'checkbox') input.checked = false;
+                        else input.value = '';
+                    });
+                } else {
+                    overlay.classList.add('hidden');
+                    inputs.forEach(input => input.disabled = false);
+                }
+                recalculateAndNotify();
+            });
+        });
+
+        document.querySelectorAll('.btn-close-death').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const card = e.target.closest('.player-card');
+                const overlay = card.querySelector('.death-overlay');
+                overlay.classList.add('hidden');
+            });
+        });
+
+        playersScoringContainer.querySelectorAll('input').forEach(input => {
+            if (!input.classList.contains('input-is-alive') && !input.classList.contains('p-name-input')) {
+                input.addEventListener('input', recalculateAndNotify);
+                input.addEventListener('change', recalculateAndNotify);
+            }
+        });
+    }
+
+    function recalculateAndNotify() {
+        sessionData.players.forEach(p => {
+            const card = playersScoringContainer.querySelector(`[data-id="${p.id}"].input-is-alive`)?.closest('.player-card');
+            if (!card) return;
+            
+            const isAlive = card.querySelector('.input-is-alive').checked;
+            p.isAlive = isAlive;
+
+            if (!isAlive) {
+                p.mission = false;
+                p.artifact = '';
+                p.gold = '';
+                p.token = '';
+                p.card = '';
+                p.totalScore = 0;
+            } else {
+                p.mission = card.querySelector('.input-mission').checked;
+                
+                const artVal = card.querySelector('.input-artifact').value;
+                const goldVal = card.querySelector('.input-gold').value;
+                const tokenVal = card.querySelector('.input-token').value;
+                const cardVal = card.querySelector('.input-card').value;
+
+                p.artifact = artVal === '' ? '' : parseInt(artVal);
+                p.gold = goldVal === '' ? '' : parseInt(goldVal);
+                p.token = tokenVal === '' ? '' : parseInt(tokenVal);
+                p.card = cardVal === '' ? '' : parseInt(cardVal);
+
+                const missionScore = p.mission ? 20 : 0;
+                const artScore = p.artifact === '' ? 0 : p.artifact;
+                const goldScore = p.gold === '' ? 0 : p.gold;
+                const tokenScore = p.token === '' ? 0 : p.token;
+                const cardScore = p.card === '' ? 0 : p.card;
+
+                p.totalScore = missionScore + artScore + goldScore + tokenScore + cardScore;
+            }
+        });
+
+        updateLeaderboard();
+        saveRoomData();
+    }
+
+    function updateLeaderboard() {
+        const sortedPlayers = [...sessionData.players].sort((a, b) => {
+            if (b.totalScore !== a.totalScore) {
+                return b.totalScore - a.totalScore;
+            }
+            const artA = a.artifact === '' ? 0 : a.artifact;
+            const artB = b.artifact === '' ? 0 : b.artifact;
+            return artB - artA;
+        });
+
+        leaderboardBody.innerHTML = '';
+        
+        if (sortedPlayers.length === 0) {
+            leaderboardBody.innerHTML = `<tr><td colspan="5" style="color: var(--text-muted);">순위 데이터가 없습니다.</td></tr>`;
+            return;
+        }
+
+        sortedPlayers.forEach((p, index) => {
+            const tr = document.createElement('tr');
+            if (index === 0) tr.classList.add('rank-1');
+
+            let rankText = `${index + 1}위`;
+
+            if (index > 0 && sortedPlayers[index].totalScore === sortedPlayers[index - 1].totalScore) {
+                const artCurr = p.artifact === '' ? 0 : p.artifact;
+                const artPrev = sortedPlayers[index - 1].artifact === '' ? 0 : sortedPlayers[index - 1].artifact;
+                if (artCurr === artPrev) {
+                    rankText = `${index}위(동점)`;
+                } else {
+                    rankText = `${index + 1}위`;
+                }
+            }
+
+            const aliveBadge = p.isAlive 
+                ? `<span class="alive-badge">생존</span>` 
+                : `<span class="dead-badge">사망(0점)</span>`;
+
+            const artDisplayNum = p.artifact === '' ? 0 : p.artifact;
+            let artifactDisplay = `${artDisplayNum}점`;
+            if (index > 0 && p.totalScore === sortedPlayers[index - 1].totalScore) {
+                const artCurr = p.artifact === '' ? 0 : p.artifact;
+                const artPrev = sortedPlayers[index - 1].artifact === '' ? 0 : sortedPlayers[index - 1].artifact;
+                if (artCurr > artPrev) {
+                    artifactDisplay += `<span class="tie-note">✨유물 승리</span>`;
+                } else if (artCurr < artPrev) {
+                    artifactDisplay += `<span class="tie-note" style="color:var(--text-muted);">유물 열세</span>`;
+                }
+            }
+
+            tr.innerHTML = `
+                <td>${rankText}</td>
+                <td>${p.name}</td>
+                <td>${aliveBadge}</td>
+                <td>${artifactDisplay}</td>
+                <td><strong>${p.totalScore}점</strong></td>
+            `;
+            leaderboardBody.appendChild(tr);
+        });
+    }
+
+    function addLog(message) {
+        if (!sessionData.logs) sessionData.logs = [];
+        const logText = `${new Date().toLocaleTimeString()} - ${message}`;
+        sessionData.logs.unshift(logText);
+        if (sessionData.logs.length > 20) sessionData.logs.pop(); // 최대 20개 유지
+        renderLogs();
+        saveRoomData();
+    }
+
+    function renderLogs() {
+        scoreLogFeed.innerHTML = '';
+        if (!sessionData.logs || sessionData.logs.length === 0) {
+            scoreLogFeed.innerHTML = `<div class="log-item">[시스템] 카타콤 모험이 시작되었습니다.</div>`;
+            return;
+        }
+        sessionData.logs.forEach(log => {
+            const div = document.createElement('div');
+            div.className = 'log-item';
+            div.textContent = log;
+            scoreLogFeed.appendChild(div);
+        });
+    }
 </script>
 
 </body>
 </html>
-```[cite: 1]
