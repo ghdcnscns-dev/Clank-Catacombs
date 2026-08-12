@@ -3,208 +3,552 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>클랭크 카타콤 (Clank! Catacombs) 점수계산기</title>
-    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <title>클랭크 카타콤: 던전 실시간 점수 계산기</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Nanum+Gothic:wght@400;700&display=swap" rel="stylesheet">
     <style>
-        .dungeon-bg {
-            background: linear-gradient(135deg, #09090b 0%, #18181b 50%, #270e0e 100%);
+        :root {
+            --bg-color: #0c0908;
+            --panel-bg: #1a1512;
+            --panel-border: #3d2e24;
+            --accent-gold: #d4af37;
+            --accent-gold-hover: #f1c40f;
+            --text-main: #e0d5c1;
+            --text-muted: #9c8b77;
+            --danger: #c0392b;
+            --success: #27ae60;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: 'Nanum Gothic', sans-serif;
+            background-image: radial-gradient(circle at center, #231914 0%, #0c0908 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 2px solid var(--accent-gold);
+            padding-bottom: 20px;
+        }
+
+        h1 {
+            font-family: 'Cinzel', serif;
+            color: var(--accent-gold);
+            font-size: 2.2rem;
+            letter-spacing: 2px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.7);
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: var(--text-muted);
+            font-size: 1rem;
+        }
+
+        /* 섹션 공통 스타일 */
+        .card {
+            background-color: var(--panel-bg);
+            border: 2px solid var(--panel-border);
+            border-radius: 8px;
+            padding: 25px;
+            margin-bottom: 25px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.6);
+        }
+
+        h2 {
+            font-family: 'Cinzel', serif;
+            color: var(--accent-gold);
+            font-size: 1.3rem;
+            margin-bottom: 15px;
+            border-bottom: 1px solid var(--panel-border);
+            padding-bottom: 8px;
+        }
+
+        /* 참여코드 영역 */
+        .code-setup {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        input[type="text"], input[type="number"] {
+            background-color: #0f0b09;
+            border: 1px solid var(--panel-border);
+            color: var(--text-main);
+            padding: 10px 15px;
+            border-radius: 4px;
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        input[type="text"]:focus, input[type="number"]:focus {
+            border-color: var(--accent-gold);
+        }
+
+        button {
+            background: linear-gradient(to bottom, #d4af37, #997a15);
+            color: #0c0908;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 1rem;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.4);
+            transition: all 0.2s;
+        }
+
+        button:hover {
+            background: linear-gradient(to bottom, #f1c40f, #b8860b);
+            transform: translateY(-1px);
+        }
+
+        .btn-danger {
+            background: linear-gradient(to bottom, #e74c3c, #c0392b);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: linear-gradient(to bottom, #ff6b6b, #e74c3c);
+        }
+
+        /* 플레이어 입력 폼 */
+        .player-form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .input-group label {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 10px;
+            cursor: pointer;
+            background: #0f0b09;
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid var(--panel-border);
+        }
+
+        .checkbox-group input {
+            width: 18px;
+            height: 18px;
+            accent-color: var(--accent-gold);
+            cursor: pointer;
+        }
+
+        /* 실시간 순위표 */
+        .leaderboard-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        .leaderboard-table th, .leaderboard-table td {
+            padding: 12px;
+            text-align: center;
+            border-bottom: 1px solid var(--panel-border);
+        }
+
+        .leaderboard-table th {
+            background-color: #231914;
+            color: var(--accent-gold);
+            font-family: 'Cinzel', serif;
+        }
+
+        .leaderboard-table tr:hover {
+            background-color: rgba(212, 175, 55, 0.05);
+        }
+
+        .rank-1 {
+            color: var(--accent-gold);
+            font-weight: bold;
+        }
+
+        /* 점수 획득 로그 피드 */
+        .log-container {
+            background-color: #0f0b09;
+            border: 1px solid var(--panel-border);
+            border-radius: 4px;
+            height: 150px;
+            overflow-y: auto;
+            padding: 10px;
+            font-family: monospace;
+            font-size: 0.9rem;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .log-item {
+            padding: 4px 8px;
+            background: rgba(255, 255, 255, 0.03);
+            border-left: 3px solid var(--accent-gold);
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .dead-badge {
+            color: var(--danger);
+            font-weight: bold;
+        }
+
+        .alive-badge {
+            color: var(--success);
+            font-weight: bold;
+        }
+
+        .hidden {
+            display: none !important;
         }
     </style>
 </head>
-<body class="dungeon-bg text-slate-100 min-h-screen flex flex-col items-center justify-center p-4">
+<body>
 
-    <div class="w-full max-w-md bg-zinc-900/90 rounded-2xl shadow-2xl p-6 border border-zinc-700/80 backdrop-blur-md space-y-5">
-        <h1 class="text-2xl font-black text-center text-red-500 tracking-wider">🗡️ 클랭크 카타콤 점수계산기</h1>
+<div class="container">
+    <header>
+        <h1>CLANK! CATACOMBS</h1>
+        <div class="subtitle">지하 카타콤의 심장부, 실시간 탐험 점수 정산소</div>
+    </header>
 
-        <!-- 상단 점수 표시 및 계산기 버튼 -->
-        <div class="flex justify-between items-center bg-zinc-800/60 p-3.5 rounded-xl border border-zinc-700/60">
-            <div>
-                <span class="text-xs text-zinc-400 block">탐험 결과</span>
-                <span class="text-sm font-bold text-zinc-200">개인 정산 모드</span>
+    <!-- 참여 코드 및 플레이어 세팅 섹션 -->
+    <section class="card" id="setup-section">
+        <h2>참여 코드 및 탐험가 설정</h2>
+        <div class="code-setup" style="margin-bottom: 20px;">
+            <div class="input-group">
+                <label>참여 코드 입력 (세션 공유용)</label>
+                <input type="text" id="session-code" placeholder="예: CATACOMB-01">
             </div>
-            <div class="flex items-center gap-3">
-                <div class="text-right">
-                    <span class="text-xs text-zinc-400 block">최종 점수</span>
-                    <span id="my-score" class="text-2xl font-black text-amber-400">0점</span>
-                </div>
-                <button onclick="toggleCalculator()" class="bg-zinc-700 hover:bg-zinc-600 text-amber-400 px-2.5 py-2 rounded-lg font-bold text-xs transition cursor-pointer flex flex-col items-center justify-center gap-0.5 shadow">
-                    <span>🧮</span>
-                    <span>계산기</span>
-                </button>
+            <button id="btn-start-session" style="align-self: flex-end;">던전 입장하기</button>
+        </div>
+        <div id="player-config-area" class="hidden">
+            <div class="input-group" style="margin-bottom: 15px;">
+                <label>참여 탐험가 수</label>
+                <input type="number" id="player-count" min="1" max="4" value="2">
             </div>
+            <div id="player-name-inputs" class="player-form-grid" style="margin-bottom: 15px;"></div>
+            <button id="btn-init-players">탐험대 구성 완료</button>
+        </div>
+    </section>
+
+    <!-- 점수 기록 섹션 -->
+    <section class="card hidden" id="scoring-section">
+        <h2>탐험가별 기록 관리</h2>
+        <div class="input-group" style="margin-bottom: 15px;">
+            <label>기록할 탐험가 선택</label>
+            <select id="active-player-select" style="background-color: #0f0b09; border: 1px solid var(--panel-border); color: var(--text-main); padding: 10px; border-radius: 4px; outline: none;"></select>
         </div>
 
-        <!-- 미니 계산기 패널 -->
-        <div id="calculator-panel" style="display: none;" class="bg-zinc-950 p-3 rounded-xl border border-amber-500/40 space-y-2.5 shadow-2xl">
-            <div class="flex justify-between items-center pb-1 border-b border-zinc-800">
-                <span class="text-xs font-bold text-amber-400">🧮 탐험 계산기</span>
-                <button onclick="toggleCalculator()" class="text-zinc-400 hover:text-white text-xs font-bold cursor-pointer">✕ 닫기</button>
-            </div>
-            
-            <div id="calc-display" class="w-full bg-zinc-900 text-right px-3 py-2 rounded-lg font-mono text-xl font-bold text-amber-300 border border-zinc-800 overflow-x-auto">
-                0
-            </div>
-
-            <div class="grid grid-cols-4 gap-1.5">
-                <button onclick="calcClear()" class="bg-red-950 hover:bg-red-900 py-2 rounded font-bold text-sm text-red-200 transition cursor-pointer">C</button>
-                <button onclick="calcAppend('/')" class="bg-zinc-800 hover:bg-zinc-700 py-2 rounded font-bold text-base transition cursor-pointer text-amber-400">÷</button>
-                <button onclick="calcAppend('*')" class="bg-zinc-800 hover:bg-zinc-700 py-2 rounded font-bold text-base transition cursor-pointer text-amber-400">×</button>
-                <button onclick="calcAppend('-')" class="bg-zinc-800 hover:bg-zinc-700 py-2 rounded font-bold text-base transition cursor-pointer text-amber-400">-</button>
-
-                <button onclick="calcAppend('7')" class="bg-zinc-800 hover:bg-zinc-700 py-2 rounded font-bold text-base transition cursor-pointer">7</button>
-                <button onclick="calcAppend('8')" class="bg-zinc-800 hover:bg-zinc-700 py-2 rounded font-bold text-base transition cursor-pointer">8</button>
-                <button onclick="calcAppend('9')" class="bg-zinc-800 hover:bg-zinc-700 py-2 rounded font-bold text-base transition cursor-pointer">9</button>
-                <button onclick="calcAppend('+')" class="bg-zinc-800 hover:bg-zinc-700 py-2 rounded font-bold text-base transition cursor-pointer text-amber-400">+</button>
-
-                <button onclick="calcAppend('4')" class="bg-zinc-800 hover:bg-zinc-700 py-2 rounded font-bold text-base transition cursor-pointer">4</button>
-                <button onclick="calcAppend('5')" class="bg-zinc-800 hover:bg-zinc-700 py-2 rounded font-bold text-base transition cursor-pointer">5</button>
-                <button onclick="calcAppend('6')" class="bg-zinc-800 hover:bg-zinc-700 py-2 rounded font-bold text-base transition cursor-pointer">6</button>
-                <button onclick="calcCalculate()" class="bg-emerald-700 hover:bg-emerald-600 py-2 rounded font-bold text-base transition cursor-pointer text-white row-span-2">=</button>
-
-                <button onclick="calcAppend('1')" class="bg-zinc-800 hover:bg-zinc-700 py-2 rounded font-bold text-base transition cursor-pointer">1</button>
-                <button onclick="calcAppend('2')" class="bg-zinc-800 hover:bg-zinc-700 py-2 rounded font-bold text-base transition cursor-pointer">2</button>
-                <button onclick="calcAppend('3')" class="bg-zinc-800 hover:bg-zinc-700 py-2 rounded font-bold text-base transition cursor-pointer">3</button>
-
-                <button onclick="calcAppend('0')" class="col-span-2 bg-zinc-800 hover:bg-zinc-700 py-2 rounded font-bold text-base transition cursor-pointer">0</button>
-                <button onclick="calcAppend('.')" class="bg-zinc-800 hover:bg-zinc-700 py-2 rounded font-bold text-base transition cursor-pointer">.</button>
-            </div>
-        </div>
-
-        <!-- 점수 입력 섹션 -->
-        <div class="bg-zinc-800/40 p-4 rounded-xl border border-zinc-700/60 space-y-4">
-            <h2 class="text-sm font-bold text-red-400 flex items-center gap-1.5">
-                <span>🗝️</span> 탈출 및 점수 정산
-            </h2>
-
-            <!-- 1단계: 생존 유무 체크 -->
-            <div class="bg-zinc-900/70 p-3 rounded-lg border border-zinc-700/50 flex items-center justify-between">
-                <div>
-                    <span class="text-sm font-bold text-zinc-200 block">탈출 생존 여부</span>
-                    <span class="text-xs text-zinc-400">체크해야만 점수 기록 및 연산이 가능합니다.</span>
-                </div>
-                <label class="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" id="survival-check" onchange="toggleSurvival()" class="sr-only peer">
-                    <div class="w-11 h-6 bg-zinc-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+        <div class="player-form-grid">
+            <!-- 생존 유무 체크 -->
+            <div class="input-group" style="grid-column: 1 / -1;">
+                <label class="checkbox-group">
+                    <input type="checkbox" id="input-is-alive" checked>
+                    <span>던전 탈출 생존 여부 (체크 해제 시 모든 점수 0점 처리 및 입력 차단)</span>
                 </label>
             </div>
-
-            <!-- 2단계: 임무완수 토큰 체크 -->
-            <div class="bg-zinc-900/70 p-3 rounded-lg border border-zinc-700/50 flex items-center justify-between">
-                <div>
-                    <span class="text-sm font-bold text-zinc-200 block">임무 완료 토큰 달성</span>
-                    <span class="text-xs text-zinc-400">조건 만족 시 체크 (+20점 획득)</span>
-                </div>
-                <input type="checkbox" id="quest-check" onchange="calculateTotalScore()" disabled class="w-5 h-5 accent-red-600 cursor-not-allowed">
-            </div>
-
-            <!-- 3단계: 세부 점수 입력 항목들 -->
-            <div class="grid grid-cols-2 gap-2.5">
-                <div>
-                    <label class="block text-xs text-zinc-400 mb-1">유물 점수 (깡점수)</label>
-                    <input type="number" id="artifact-score" value="0" oninput="calculateTotalScore()" disabled class="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-zinc-400 font-bold text-center cursor-not-allowed">
-                </div>
-                <div>
-                    <label class="block text-xs text-zinc-400 mb-1">금화 개수 (+1점/개)</label>
-                    <input type="number" id="gold-score" value="0" oninput="calculateTotalScore()" disabled class="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-zinc-400 font-bold text-center cursor-not-allowed">
-                </div>
-                <div>
-                    <label class="block text-xs text-zinc-400 mb-1">기타 토큰 점수</label>
-                    <input type="number" id="token-score" value="0" oninput="calculateTotalScore()" disabled class="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-zinc-400 font-bold text-center cursor-not-allowed">
-                </div>
-                <div>
-                    <label class="block text-xs text-zinc-400 mb-1">카드 점수 (깡점수)</label>
-                    <input type="number" id="card-score" value="0" oninput="calculateTotalScore()" disabled class="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-zinc-400 font-bold text-center cursor-not-allowed">
-                </div>
-            </div>
-
-            <div class="pt-2 border-t border-zinc-700/50">
-                <button onclick="resetScore()" class="w-full bg-zinc-700 hover:bg-zinc-600 font-medium py-2.5 rounded-lg text-xs transition cursor-pointer text-zinc-300">점수 초기화</button>
-            </div>
-        </div>
-
-        <div class="mt-4 pt-4 border-t border-zinc-800 text-center">
-            <p class="text-xs text-zinc-600">Clank! Catacombs Offline Score Calculator</p>
-        </div>
-    </div>
-
-    <script>
-        let calcExpression = "0";
-
-        function toggleCalculator() {
-            const panel = document.getElementById('calculator-panel');
-            panel.style.display = (panel.style.display === 'none' || panel.style.display === '') ? 'block' : 'none';
-        }
-
-        function updateCalcDisplay() {
-            document.getElementById('calc-display').innerText = calcExpression;
-        }
-
-        function calcAppend(val) {
-            calcExpression = (calcExpression === "0" && !isNaN(val)) ? val : calcExpression + val;
-            updateCalcDisplay();
-        }
-
-        function calcClear() {
-            calcExpression = "0";
-            updateCalcDisplay();
-        }
-
-        function calcCalculate() {
-            try {
-                let result = eval(calcExpression);
-                calcExpression = String(result);
-                updateCalcDisplay();
-            } catch (e) {
-                calcExpression = "오류";
-                updateCalcDisplay();
-                setTimeout(() => { calcClear(); }, 1200);
-            }
-        }
-
-        function toggleSurvival() {
-            const isAlive = document.getElementById('survival-check').checked;
-            const fields = ['quest-check', 'artifact-score', 'gold-score', 'token-score', 'card-score'];
             
-            fields.forEach(id => {
-                const el = document.getElementById(id);
-                el.disabled = !isAlive;
-                if (!isAlive) {
-                    if (id.includes('score')) el.value = 0;
-                    else el.checked = false;
-                    el.classList.add('bg-zinc-900', 'text-zinc-400', 'cursor-not-allowed');
-                    el.classList.remove('bg-zinc-800', 'text-zinc-100', 'cursor-pointer');
-                } else {
-                    el.classList.remove('bg-zinc-900', 'text-zinc-400', 'cursor-not-allowed');
-                    el.classList.add('bg-zinc-800', 'text-zinc-100', 'cursor-pointer');
-                }
+            <div class="input-group">
+                <label>임무 완수 토큰 (+20점)</label>
+                <label class="checkbox-group">
+                    <input type="checkbox" id="input-mission">
+                    <span>임무 완수 조건 만족 (+20점 획득)</span>
+                </label>
+            </div>
+            
+            <div class="input-group">
+                <label>유물 점수 (깡점수)</label>
+                <input type="number" id="input-artifact" value="0" min="0">
+            </div>
+
+            <div class="input-group">
+                <label>금화 개수 (+1점/개당)</label>
+                <input type="number" id="input-gold" value="0" min="0">
+            </div>
+
+            <div class="input-group">
+                <label>토큰 점수 (깡점수)</label>
+                <input type="number" id="input-token" value="0" min="0">
+            </div>
+
+            <div class="input-group">
+                <label>카드 점수 (깡점수)</label>
+                <input type="number" id="input-card" value="0" min="0">
+            </div>
+        </div>
+
+        <button id="btn-record-score" style="margin-top: 20px; width: 100%;">점수 기록 및 실시간 반영</button>
+    </section>
+
+    <!-- 실시간 순위표 및 피드 섹션 -->
+    <section class="card hidden" id="dashboard-section">
+        <h2>실시간 던전 탐험 순위 (참여 코드: <span id="display-code" style="color:var(--accent-gold);"></span>)</h2>
+        <table class="leaderboard-table">
+            <thead>
+                <tr>
+                    <th>순위</th>
+                    <th>탐험가 이름</th>
+                    <th>생존 상태</th>
+                    <th>유물 점수</th>
+                    <th>총점</th>
+                </tr>
+            </thead>
+            <tbody id="leaderboard-body">
+                <!-- 동적 생성 -->
+            </tbody>
+        </table>
+
+        <h2 style="margin-top: 30px;">실시간 점수 변동 피드</h2>
+        <div class="log-container" id="score-log-feed">
+            <div class="log-item">[시스템] 카타콤 던전 탐험이 시작되었습니다. 점수를 기록해 주세요.</div>
+        </div>
+    </section>
+</div>
+
+<script>
+    let sessionData = {
+        code: "",
+        players: []
+    };
+
+    // DOM 요소 캐싱
+    const setupSection = document.getElementById('setup-section');
+    const scoringSection = document.getElementById('scoring-section');
+    const dashboardSection = document.getElementById('dashboard-section');
+    
+    const sessionCodeInput = document.getElementById('session-code');
+    const btnStartSession = document.getElementById('btn-start-session');
+    const playerConfigArea = document.getElementById('player-config-area');
+    const playerCountInput = document.getElementById('player-count');
+    const playerNameInputs = document.getElementById('player-name-inputs');
+    const btnInitPlayers = document.getElementById('btn-init-players');
+    
+    const activePlayerSelect = document.getElementById('active-player-select');
+    const inputIsAlive = document.getElementById('input-is-alive');
+    const inputMission = document.getElementById('input-mission');
+    const inputArtifact = document.getElementById('input-artifact');
+    const inputGold = document.getElementById('input-gold');
+    const inputToken = document.getElementById('input-token');
+    const inputCard = document.getElementById('input-card');
+    const btnRecordScore = document.getElementById('btn-record-score');
+    
+    const displayCode = document.getElementById('display-code');
+    const leaderboardBody = document.getElementById('leaderboard-body');
+    const scoreLogFeed = document.getElementById('score-log-feed');
+
+    // 1단계: 세션 코드 입력 후 플레이어 수 설정 활성화
+    btnStartSession.addEventListener('click', () => {
+        const code = sessionCodeInput.value.trim();
+        if (!code) {
+            alert('참여 코드를 입력해주세요!');
+            return;
+        }
+        sessionData.code = code;
+        displayCode.textContent = code;
+        playerConfigArea.classList.remove('hidden');
+        sessionCodeInput.disabled = true;
+        btnStartSession.disabled = true;
+        renderPlayerNameInputs();
+    });
+
+    // 플레이어 이름 입력 필드 동적 생성
+    function renderPlayerNameInputs() {
+        const count = parseInt(playerCountInput.value) || 2;
+        playerNameInputs.innerHTML = '';
+        for (let i = 0; i < count; i++) {
+            playerNameInputs.innerHTML += `
+                <div class="input-group">
+                    <label>탐험가 ${i + 1} 이름</label>
+                    <input type="text" class="p-name-input" value="모험가 ${i + 1}">
+                </div>
+            `;
+        }
+    }
+
+    playerCountInput.addEventListener('input', renderPlayerNameInputs);
+
+    // 2단계: 탐험가 구성 완료 및 게임 영역 진입
+    btnInitPlayers.addEventListener('click', () => {
+        const nameInputs = document.querySelectorAll('.p-name-input');
+        sessionData.players = [];
+        
+        nameInputs.forEach((input, index) => {
+            sessionData.players.push({
+                id: index,
+                name: input.value.trim() || `모험가 ${index + 1}`,
+                isAlive: true,
+                mission: false,
+                artifact: 0,
+                gold: 0,
+                token: 0,
+                card: 0,
+                totalScore: 0
             });
+        });
 
-            if (!isAlive) {
-                document.getElementById('my-score').innerText = '0점';
-            } else {
-                calculateTotalScore();
+        updatePlayerSelect();
+        updateLeaderboard();
+        
+        setupSection.classList.add('hidden');
+        scoringSection.classList.remove('hidden');
+        dashboardSection.classList.remove('hidden');
+    });
+
+    function updatePlayerSelect() {
+        activePlayerSelect.innerHTML = '';
+        sessionData.players.forEach(p => {
+            const opt = document.createElement('option');
+            opt.value = p.id;
+            opt.textContent = p.name;
+            activePlayerSelect.appendChild(opt);
+        });
+        loadPlayerDataToForm(sessionData.players[0].id);
+    }
+
+    // 선택된 플레이어의 기존 데이터를 폼에 로드
+    activePlayerSelect.addEventListener('change', (e) => {
+        loadPlayerDataToForm(parseInt(e.target.value));
+    });
+
+    function loadPlayerDataToForm(playerId) {
+        const p = sessionData.players.find(item => item.id === playerId);
+        if (!p) return;
+        inputIsAlive.checked = p.isAlive;
+        inputMission.checked = p.mission;
+        inputArtifact.value = p.artifact;
+        inputGold.value = p.gold;
+        inputToken.value = p.token;
+        inputCard.value = p.card;
+        
+        toggleScoreInputs(!p.isAlive);
+    }
+
+    // 생존 체크박스 변경 시 점수 입력 제한 핸들링
+    inputIsAlive.addEventListener('change', (e) => {
+        toggleScoreInputs(!e.target.checked);
+    });
+
+    function toggleScoreInputs(isDead) {
+        inputMission.disabled = isDead;
+        inputArtifact.disabled = isDead;
+        inputGold.disabled = isDead;
+        inputToken.disabled = isDead;
+        inputCard.disabled = isDead;
+        if (isDead) {
+            inputMission.checked = false;
+            inputArtifact.value = 0;
+            inputGold.value = 0;
+            inputToken.value = 0;
+            inputCard.value = 0;
+        }
+    }
+
+    // 3단계: 점수 기록 및 실시간 연산
+    btnRecordScore.addEventListener('click', () => {
+        const selectedId = parseInt(activePlayerSelect.value);
+        const p = sessionData.players.find(item => item.id === selectedId);
+        if (!p) return;
+
+        const isAlive = inputIsAlive.checked;
+        p.isAlive = isAlive;
+
+        if (!isAlive) {
+            p.mission = false;
+            p.artifact = 0;
+            p.gold = 0;
+            p.token = 0;
+            p.card = 0;
+            p.totalScore = 0;
+            addLog(`[사망] ${p.name}님이 카타콤에서 탈출하지 못해 모든 점수가 무효화되었습니다! (0점)`);
+        } else {
+            p.mission = inputMission.checked;
+            p.artifact = parseInt(inputArtifact.value) || 0;
+            p.gold = parseInt(inputGold.value) || 0;
+            p.token = parseInt(inputToken.value) || 0;
+            p.card = parseInt(inputCard.value) || 0;
+
+            const missionScore = p.mission ? 20 : 0;
+            // 총점 계산: 임무완수(+20) + 유물깡점수 + 금화개당(+1) + 토큰깡점수 + 카드깡점수
+            p.totalScore = missionScore + p.artifact + p.gold + p.token + p.card;
+
+            addLog(`[기록 갱신] ${p.name}님의 점수가 업데이트되었습니다! (획득 총점: ${p.totalScore}점)`);
+        }
+
+        updateLeaderboard();
+    });
+
+    // 실시간 순위 정렬 및 렌더링 (동점 시 유물점수 비교 규칙 적용)
+    function updateLeaderboard() {
+        // 정렬 조건: 1. 총점 내림차순, 2. 총점이 같을 경우 유물점수(artifact) 내림차순
+        const sortedPlayers = [...sessionData.players].sort((a, b) => {
+            if (b.totalScore !== a.totalScore) {
+                return b.totalScore - a.totalScore;
             }
-        }
+            return b.artifact - a.artifact;
+        });
 
-        function calculateTotalScore() {
-            const isAlive = document.getElementById('survival-check').checked;
-            if (!isAlive) return;
+        leaderboardBody.innerHTML = '';
+        sortedPlayers.forEach((p, index) => {
+            const tr = document.createElement('tr');
+            if (index === 0) tr.classList.add('rank-1');
 
-            const hasQuest = document.getElementById('quest-check').checked;
-            const artifact = parseInt(document.getElementById('artifact-score').value) || 0;
-            const gold = parseInt(document.getElementById('gold-score').value) || 0;
-            const token = parseInt(document.getElementById('token-score').value) || 0;
-            const card = parseInt(document.getElementById('card-score').value) || 0;
-            const questBonus = hasQuest ? 20 : 0;
+            const rankText = `${index + 1}위`;
+            const aliveBadge = p.isAlive 
+                ? `<span class="alive-badge">생존 탈출</span>` 
+                : `<span class="dead-badge">사망 (0점)</span>`;
 
-            const totalScore = artifact + gold + token + card + questBonus;
-            document.getElementById('my-score').innerText = totalScore + '점';
-        }
+            tr.innerHTML = `
+                <td>${rankText}</td>
+                <td>${p.name}</td>
+                <td>${aliveBadge}</td>
+                <td>${p.artifact}점</td>
+                <td><strong>${p.totalScore}점</strong></td>
+            `;
+            leaderboardBody.appendChild(tr);
+        });
+    }
 
-        function resetScore() {
-            document.getElementById('survival-check').checked = false;
-            toggleSurvival();
-        }
-    </script>
+    // 로그 피드 추가 함수
+    function addLog(message) {
+        const div = document.createElement('div');
+        div.className = 'log-item';
+        div.textContent = `${new Date().toLocaleTimeString()} - ${message}`;
+        scoreLogFeed.prepend(div);
+    }
+</script>
+
 </body>
 </html>
