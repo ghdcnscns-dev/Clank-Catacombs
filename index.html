@@ -4,20 +4,25 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>클랭크 카타콤: 실시간 자동점수 계산기</title>
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Nanum+Gothic:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;900&family=Nanum+Gothic:wght@400;700&display=swap" rel="stylesheet">
     <!-- Supabase JS CDN 추가 -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root {
+            --bg-deep: #070504;
             --bg-color: #0c0908;
-            --panel-bg: #1a1512;
-            --panel-border: #3d2e24;
-            --accent-gold: #d4af37;
-            --accent-gold-hover: #f1c40f;
-            --text-main: #e0d5c1;
-            --text-muted: #9c8b77;
-            --danger: #c0392b;
-            --success: #27ae60;
+            --panel-bg: #14100e;
+            --panel-bg-glass: rgba(20, 16, 14, 0.85);
+            --panel-border: #33241c;
+            --panel-border-glow: #5e4130;
+            --accent-gold: #f1c40f;
+            --accent-gold-dark: #b7950b;
+            --accent-orange: #e67e22;
+            --text-main: #f3efe6;
+            --text-muted: #a39382;
+            --danger: #e74c3c;
+            --danger-glow: rgba(231, 76, 60, 0.4);
+            --success: #2ecc71;
         }
 
         * {
@@ -28,57 +33,84 @@
         }
 
         body {
-            background-color: var(--bg-color);
+            background-color: var(--bg-deep);
             color: var(--text-main);
             font-family: 'Nanum Gothic', sans-serif;
-            background-image: radial-gradient(circle at center, #231914 0%, #0c0908 100%);
+            background-image: 
+                radial-gradient(circle at 50% 10%, rgba(230, 126, 34, 0.08) 0%, transparent 50%),
+                radial-gradient(circle at 50% 90%, rgba(7, 5, 4, 0.9) 0%, #070504 100%);
             min-height: 100vh;
-            padding: 10px;
+            padding: 12px;
+            display: flex;
+            justify-content: center;
         }
 
         .container {
-            max-width: 100%;
+            width: 100%;
+            max-width: 480px;
             margin: 0 auto;
         }
 
         header {
             text-align: center;
-            margin-bottom: 15px;
-            border-bottom: 2px solid var(--accent-gold);
-            padding-bottom: 10px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid var(--panel-border);
+            padding-bottom: 15px;
+            position: relative;
+        }
+
+        header::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 120px;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--accent-orange), transparent);
         }
 
         h1 {
             font-family: 'Cinzel', serif;
             color: var(--accent-gold);
-            font-size: 1.5rem;
-            letter-spacing: 1px;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.7);
-            margin-bottom: 5px;
+            font-size: 1.65rem;
+            letter-spacing: 2px;
+            text-shadow: 0 2px 8px rgba(0,0,0,0.8), 0 0 15px rgba(241, 196, 15, 0.2);
+            margin-bottom: 6px;
+            font-weight: 900;
         }
 
         .subtitle {
             color: var(--text-muted);
-            font-size: 0.8rem;
-            margin-bottom: 4px;
+            font-size: 0.82rem;
+            letter-spacing: 0.5px;
+            margin-bottom: 6px;
         }
 
         .creator {
-            color: var(--accent-gold);
+            color: var(--accent-orange);
             font-size: 0.75rem;
             font-family: 'Cinzel', serif;
-            letter-spacing: 0.5px;
-            opacity: 0.85;
+            letter-spacing: 1px;
+            opacity: 0.9;
         }
 
         .card {
-            background-color: var(--panel-bg);
-            border: 2px solid var(--panel-border);
-            border-radius: 8px;
-            padding: 12px;
-            margin-bottom: 15px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.6);
+            background: var(--panel-bg);
+            border: 1px solid var(--panel-border);
+            border-radius: 10px;
+            padding: 16px;
+            margin-bottom: 16px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.05);
             position: relative;
+            backdrop-filter: blur(10px);
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; height: 1px;
+            background: linear-gradient(90deg, transparent, var(--panel-border-glow), transparent);
         }
 
         .card.hidden {
@@ -90,111 +122,126 @@
             justify-content: space-between;
             align-items: center;
             border-bottom: 1px solid var(--panel-border);
-            padding-bottom: 8px;
-            margin-bottom: 12px;
-            gap: 8px;
+            padding-bottom: 10px;
+            margin-bottom: 14px;
+            gap: 10px;
         }
 
         h2 {
             font-family: 'Cinzel', serif;
             color: var(--accent-gold);
-            font-size: 1.05rem;
+            font-size: 1.1rem;
             margin: 0;
             border: none;
             padding: 0;
             white-space: nowrap;
+            letter-spacing: 0.5px;
         }
 
         input[type="text"], input[type="number"] {
-            background-color: #0f0b09;
+            background-color: #090706;
             border: 1px solid var(--panel-border);
             color: var(--text-main);
-            padding: 10px;
+            padding: 12px;
             border-radius: 6px;
             font-size: 1rem;
             outline: none;
-            transition: border-color 0.3s;
+            transition: all 0.3s ease;
             width: 100%;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);
         }
 
         input[type="text"]:focus, input[type="number"]:focus {
-            border-color: var(--accent-gold);
+            border-color: var(--accent-orange);
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.5), 0 0 8px rgba(230, 126, 34, 0.3);
         }
 
         button {
-            background: linear-gradient(to bottom, #d4af37, #997a15);
+            background: linear-gradient(135deg, #d4af37 0%, #997a15 100%);
             color: #0c0908;
             border: none;
-            padding: 8px 12px;
+            padding: 10px 16px;
             border-radius: 6px;
-            font-weight: bold;
-            font-size: 0.85rem;
+            font-weight: 700;
+            font-size: 0.9rem;
             cursor: pointer;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.4);
-            transition: all 0.2s;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.3);
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
             white-space: nowrap;
+            font-family: 'Nanum Gothic', sans-serif;
+            letter-spacing: 0.5px;
+        }
+
+        button:hover {
+            filter: brightness(1.1);
+            transform: translateY(-1px);
         }
 
         button:active {
-            transform: scale(0.96);
+            transform: translateY(1px);
+            filter: brightness(0.95);
         }
 
         .btn-danger-subtle {
             background: transparent;
             border: 1px solid var(--danger);
             color: var(--danger);
-            padding: 4px 8px;
-            font-size: 0.75rem;
+            padding: 6px 12px;
+            font-size: 0.78rem;
+            box-shadow: none;
         }
 
-        .btn-danger-subtle:active {
+        .btn-danger-subtle:hover {
             background-color: var(--danger);
             color: white;
+            box-shadow: 0 0 10px var(--danger-glow);
         }
 
         .room-lobby {
             display: flex;
             flex-direction: column;
-            gap: 12px;
-            padding: 10px 0;
+            gap: 14px;
+            padding: 4px 0;
         }
 
         .room-info-bar {
-            background: #130f0d;
+            background: #0e0a08;
             border: 1px solid var(--panel-border);
-            padding: 8px 12px;
-            border-radius: 6px;
+            padding: 10px 14px;
+            border-radius: 8px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            font-size: 0.85rem;
-            margin-bottom: 12px;
+            font-size: 0.88rem;
+            margin-bottom: 16px;
+            box-shadow: inset 0 2px 5px rgba(0,0,0,0.6);
         }
 
         .players-grid {
             display: flex;
             flex-direction: column;
-            gap: 12px;
+            gap: 14px;
         }
 
         .player-card {
-            background-color: #130f0d;
+            background-color: #0e0a08;
             border: 1px solid var(--panel-border);
-            border-radius: 6px;
-            padding: 12px;
+            border-radius: 8px;
+            padding: 14px;
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            gap: 12px;
             position: relative;
             overflow: hidden;
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.5);
         }
 
         .player-card-header {
             font-family: 'Cinzel', serif;
-            font-size: 1rem;
+            font-size: 1.05rem;
             color: var(--accent-gold);
             border-bottom: 1px dashed var(--panel-border);
-            padding-bottom: 6px;
+            padding-bottom: 8px;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -205,30 +252,35 @@
             align-items: center;
             gap: 10px;
             cursor: pointer;
-            background: #0f0b09;
-            padding: 10px;
+            background: #090706;
+            padding: 10px 12px;
             border-radius: 6px;
             border: 1px solid var(--panel-border);
             font-size: 0.9rem;
+            transition: border-color 0.2s;
+        }
+
+        .checkbox-group:hover {
+            border-color: var(--panel-border-glow);
         }
 
         .checkbox-group input {
             width: 20px;
             height: 20px;
-            accent-color: var(--accent-gold);
+            accent-color: var(--accent-orange);
             cursor: pointer;
         }
 
         .score-inputs-grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
-            gap: 8px;
+            gap: 10px;
         }
 
         .input-group {
             display: flex;
             flex-direction: column;
-            gap: 4px;
+            gap: 5px;
         }
 
         .input-group label {
@@ -242,13 +294,14 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background-color: rgba(12, 9, 8, 0.92);
+            background-color: rgba(7, 5, 4, 0.95);
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            gap: 12px;
+            gap: 14px;
             z-index: 10;
+            backdrop-filter: blur(4px);
             transition: opacity 0.3s ease;
         }
 
@@ -259,56 +312,70 @@
         .death-title {
             font-family: 'Cinzel', serif;
             color: var(--danger);
-            font-size: 1.8rem;
-            font-weight: bold;
-            letter-spacing: 2px;
-            text-shadow: 0 0 10px rgba(192, 57, 43, 0.6);
+            font-size: 2rem;
+            font-weight: 900;
+            letter-spacing: 3px;
+            text-shadow: 0 0 20px var(--danger-glow);
             animation: pulseText 1.5s infinite alternate;
         }
 
         @keyframes pulseText {
-            from { transform: scale(1); text-shadow: 0 0 5px rgba(192, 57, 43, 0.4); }
-            to { transform: scale(1.05); text-shadow: 0 0 15px rgba(192, 57, 43, 0.8); }
+            from { transform: scale(1); opacity: 0.8; text-shadow: 0 0 10px rgba(231, 76, 60, 0.4); }
+            to { transform: scale(1.05); opacity: 1; text-shadow: 0 0 25px rgba(231, 76, 60, 0.8); }
         }
 
         .btn-close-death {
             background: transparent;
             border: 2px solid var(--danger);
             color: var(--danger);
-            padding: 6px 16px;
-            border-radius: 4px;
+            padding: 6px 18px;
+            border-radius: 6px;
             font-size: 0.85rem;
             cursor: pointer;
             box-shadow: none;
+            font-weight: bold;
+        }
+
+        .btn-close-death:hover {
+            background: var(--danger);
+            color: white;
+            box-shadow: 0 0 15px var(--danger-glow);
         }
 
         .table-responsive {
             width: 100%;
             overflow-x: auto;
+            border-radius: 6px;
+            border: 1px solid var(--panel-border);
         }
 
         .leaderboard-table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 5px;
-            font-size: 0.8rem;
+            font-size: 0.82rem;
             white-space: nowrap;
         }
 
         .leaderboard-table th, .leaderboard-table td {
-            padding: 8px 4px;
+            padding: 10px 6px;
             text-align: center;
             border-bottom: 1px solid var(--panel-border);
         }
 
         .leaderboard-table th {
-            background-color: #231914;
+            background-color: #1a1310;
             color: var(--accent-gold);
             font-family: 'Cinzel', serif;
-            font-size: 0.75rem;
+            font-size: 0.78rem;
+            letter-spacing: 0.5px;
+        }
+
+        .leaderboard-table tr:last-child td {
+            border-bottom: none;
         }
 
         .rank-1 {
+            background: linear-gradient(90deg, rgba(241, 196, 15, 0.08), transparent);
             color: var(--accent-gold);
             font-weight: bold;
         }
@@ -317,32 +384,36 @@
             font-size: 0.6rem;
             color: var(--accent-gold);
             display: block;
-            margin-top: 1px;
+            margin-top: 2px;
         }
 
         .log-container {
-            background-color: #0f0b09;
+            background-color: #090706;
             border: 1px solid var(--panel-border);
-            border-radius: 4px;
-            height: 110px;
+            border-radius: 6px;
+            height: 130px;
             overflow-y: auto;
-            padding: 8px;
+            padding: 10px;
             font-family: monospace;
-            font-size: 0.75rem;
+            font-size: 0.78rem;
             display: flex;
             flex-direction: column;
-            gap: 4px;
+            gap: 6px;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.6);
         }
 
         .log-item {
-            padding: 3px 6px;
-            background: rgba(255, 255, 255, 0.03);
-            border-left: 3px solid var(--accent-gold);
+            padding: 4px 8px;
+            background: rgba(255, 255, 255, 0.02);
+            border-left: 3px solid var(--accent-orange);
+            color: #d1c7bd;
+            border-radius: 0 4px 4px 0;
         }
 
         .dead-badge {
             color: var(--danger);
             font-weight: bold;
+            text-shadow: 0 0 8px rgba(231, 76, 60, 0.3);
         }
 
         .alive-badge {
@@ -363,45 +434,45 @@
     <section class="card" id="room-lobby-section">
         <h2>게임 방 입장</h2>
         <div class="room-lobby">
-            <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 4px;">본인의 닉네임을 입력 후 방을 생성하거나 코드로 입장하세요.</div>
+            <div style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.4;">본인의 탐지가명을 입력 후 새로운 방을 개설하거나 카타콤 코드로 잠입하세요.</div>
             
             <div class="input-group">
-                <label>닉네임</label>
+                <label>모험가 닉네임</label>
                 <input type="text" id="input-my-name" placeholder="사용할 닉네임 입력" value="">
             </div>
 
-            <button id="btn-create-room" style="padding: 12px; font-size: 1rem; margin-top: 4px;">방 생성하기</button>
+            <button id="btn-create-room" style="padding: 14px; font-size: 1rem; margin-top: 4px; background: linear-gradient(135deg, #e67e22, #b95d13); color: #fff;">새로운 방 개설하기</button>
             
-            <div style="display: flex; align-items: center; text-align: center; margin: 5px 0; color: var(--text-muted); font-size: 0.8rem;">
+            <div style="display: flex; align-items: center; text-align: center; margin: 8px 0; color: var(--text-muted); font-size: 0.78rem;">
                 <hr style="flex: 1; border-color: var(--panel-border);">
-                <span style="padding: 0 10px;">OR</span>
+                <span style="padding: 0 10px; font-family: 'Cinzel', serif;">OR</span>
                 <hr style="flex: 1; border-color: var(--panel-border);">
             </div>
 
             <div style="display: flex; gap: 8px;">
-                <input type="text" id="input-room-code" maxlength="4" placeholder="참여 코드 4자리" style="text-align: center; letter-spacing: 2px; font-weight: bold;">
-                <button id="btn-join-room" style="padding: 0 20px;">입장</button>
+                <input type="text" id="input-room-code" maxlength="4" placeholder="참여 코드 4자리" style="text-align: center; letter-spacing: 3px; font-weight: bold;">
+                <button id="btn-join-room" style="padding: 0 24px;">잠입</button>
             </div>
         </div>
     </section>
 
     <div id="game-content-area" style="display: none;">
         <div class="room-info-bar">
-            <span>방 코드: <strong id="display-room-code" style="color: var(--accent-gold); letter-spacing: 1px;"></strong></span>
-            <button id="btn-leave-room" class="btn-danger-subtle">나가기</button>
+            <span>카타콤 코드: <strong id="display-room-code" style="color: var(--accent-gold); letter-spacing: 2px;"></strong></span>
+            <button id="btn-leave-room" class="btn-danger-subtle">철수하기</button>
         </div>
 
         <section class="card" id="scoring-section">
             <div class="card-header-flex">
                 <h2>내 탐험 기록 관리</h2>
-                <button id="btn-submit-score" style="padding: 8px 16px; background: linear-gradient(to bottom, #27ae60, #1e8449); color: white;">💾 점수 등록하기</button>
+                <button id="btn-submit-score" style="padding: 9px 16px; background: linear-gradient(135deg, #27ae60, #1e8449); color: white;">💾 점수 동기화</button>
             </div>
             <div id="players-scoring-container" class="players-grid"></div>
         </section>
 
         <section class="card" id="dashboard-section">
             <h2>실시간 순위</h2>
-            <div class="table-responsive">
+            <div class="table-responsive" style="margin-top: 10px;">
                 <table class="leaderboard-table">
                     <thead>
                         <tr>
@@ -419,9 +490,9 @@
                 </table>
             </div>
 
-            <h2 style="margin-top: 20px; font-size: 1rem;">던전 이벤트 피드</h2>
-            <div class="log-container" id="score-log-feed">
-                <div class="log-item">[시스템] 카타콤 모험이 시작되었습니다.</div>
+            <h2 style="margin-top: 22px; font-size: 1rem;">던전 이벤트 피드</h2>
+            <div class="log-container" id="score-log-feed" style="margin-top: 8px;">
+                <div class="log-item">[시스템] 카타콤 모험이 시작되었습니다. 용을 조심하십시오.</div>
             </div>
         </section>
     </div>
@@ -472,7 +543,7 @@
             { id: myPlayerId, name: myName, isAlive: true, mission: false, artifact: '', gold: '', token: '', card: '', totalScore: 0 }
         ];
 
-        const initialLogs = [`[시스템] '${myName}'님이 방을 생성하고 카타콤 모험에 참가했습니다.`];
+        const initialLogs = [`[시스템] '${myName}'님이 방을 생성하고 카타콤 탐험을 시작했습니다.`];
 
         const { data: existingRoom } = await db.from('clank_rooms').select('room_code').eq('room_code', code).maybeSingle();
         if (existingRoom) {
@@ -547,7 +618,7 @@
         });
 
         if (!roomData.logs) roomData.logs = [];
-        roomData.logs.unshift(`[시스템] '${myName}'님이 방에 입장했습니다.`);
+        roomData.logs.unshift(`[시스템] '${myName}'님이 카타콤에 합류했습니다.`);
 
         const { error: updateError } = await db.from('clank_rooms').update({ data: roomData }).eq('room_code', code);
 
@@ -570,7 +641,7 @@
                 roomData.players = roomData.players.filter(p => p.id !== myPlayerId);
                 
                 if (!roomData.logs) roomData.logs = [];
-                roomData.logs.unshift(`[시스템] '${playerName}'님이 방을 나갔습니다.`);
+                roomData.logs.unshift(`[시스템] '${playerName}'님이 던전을 철수했습니다.`);
 
                 if (roomData.players.length === 0) {
                     await db.from('clank_rooms').delete().eq('room_code', currentRoomCode);
@@ -638,16 +709,16 @@
 
         cardDiv.innerHTML = `
             <div class="death-overlay ${overlayClass}" data-overlay-id="${myPlayer.id}">
-                <div class="death-title">사망</div>
-                <button class="btn-close-death" data-id="${myPlayer.id}">✕ 닫기</button>
+                <div class="death-title">용에게 잡힘</div>
+                <button class="btn-close-death" data-id="${myPlayer.id}">✕ 기록 확인하기</button>
             </div>
 
             <div class="player-card-header">
-                <input type="text" class="p-name-input" data-id="${myPlayer.id}" value="${myPlayer.name}" style="background:transparent; border:none; color:var(--accent-gold); font-family:'Cinzel', serif; font-size:1rem; width:100%;" placeholder="이름 입력">
+                <input type="text" class="p-name-input" data-id="${myPlayer.id}" value="${myPlayer.name}" style="background:transparent; border:none; color:var(--accent-gold); font-family:'Cinzel', serif; font-size:1.05rem; width:100%; font-weight:700;" placeholder="이름 입력">
             </div>
             <label class="checkbox-group">
                 <input type="checkbox" class="input-is-alive" data-id="${myPlayer.id}" ${myPlayer.isAlive ? 'checked' : ''}>
-                <span>생존 여부 (사망시 체크풀기)</span>
+                <span>탈출 생존 여부 (사망 시 체크 해제)</span>
             </label>
             <label class="checkbox-group">
                 <input type="checkbox" class="input-mission" data-id="${myPlayer.id}" ${myPlayer.mission ? 'checked' : ''} ${!myPlayer.isAlive ? 'disabled' : ''}>
@@ -728,7 +799,7 @@
             myPlayer.token = '';
             myPlayer.card = '';
             myPlayer.totalScore = 0;
-            addLog(`[사망] '${myPlayer.name}'님이 던전 속에서 사망했습니다... (0점 처리)`);
+            addLog(`[사망] '${myPlayer.name}'님이 용의 기습을 받아 사망했습니다... (0점 처리)`);
         } else {
             myPlayer.mission = card.querySelector('.input-mission').checked;
             
@@ -749,7 +820,7 @@
             const cardScore = myPlayer.card === '' ? 0 : myPlayer.card;
 
             myPlayer.totalScore = missionScore + artScore + goldScore + tokenScore + cardScore;
-            addLog(`[점수] '${myPlayer.name}'님의 탐험 기록이 등록되었습니다. (총점: ${myPlayer.totalScore}점)`);
+            addLog(`[기록] '${myPlayer.name}'님이 점수를 동기화했습니다. (총점: ${myPlayer.totalScore}점)`);
         }
 
         const { data } = await db.from('clank_rooms').select('data').eq('room_code', currentRoomCode).maybeSingle();
@@ -766,7 +837,7 @@
         await saveRoomData();
         updateLeaderboard();
         renderLogs();
-        alert('탐험 기록이 성공적으로 등록되었습니다!');
+        alert('탐험 기록이 성공적으로 동기화되었습니다!');
     });
 
     function updateLeaderboard() {
@@ -796,7 +867,7 @@
             if (first.totalScore > 0 && first.totalScore === second.totalScore && art1 > art2) {
                 if (lastReportedTieWinner !== first.id) {
                     lastReportedTieWinner = first.id;
-                    addLog(`[이벤트] '${first.name}'님이 동점 상황에서 유물 점수로 승리하였습니다!`);
+                    addLog(`[타이브레이커] '${first.name}'님이 동점 상황에서 유물 가치로 승리하셨습니다!`);
                 }
             } else {
                 if (lastReportedTieWinner === first.id && (first.totalScore !== second.totalScore || art1 <= art2)) {
